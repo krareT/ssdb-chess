@@ -1,0 +1,17 @@
+CC=gcc
+CXX=g++
+MAKE=make
+LEVELDB_PATH=/Users/xa_xx/ssdb/deps/leveldb-1.18
+JEMALLOC_PATH=/Users/xa_xx/ssdb/deps/jemalloc-4.1.0
+SNAPPY_PATH=/Users/xa_xx/ssdb/deps/snappy-1.1.0
+CFLAGS=
+CFLAGS = -DNDEBUG -D__STDC_FORMAT_MACROS -Wall -O2 -Wno-sign-compare
+CFLAGS += 
+CFLAGS += -I "/Users/xa_xx/ssdb/deps/leveldb-1.18/include"
+CLIBS=
+CLIBS += "/Users/xa_xx/ssdb/deps/leveldb-1.18/libleveldb.a"
+CLIBS += "/Users/xa_xx/ssdb/deps/snappy-1.1.0/.libs/libsnappy.a"
+CLIBS += "/Users/xa_xx/ssdb/deps/jemalloc-4.1.0/lib/libjemalloc.a"
+CFLAGS += -I "/Users/xa_xx/ssdb/deps/jemalloc-4.1.0/include"
+CLIBS += 
+CFLAGS += -DNEW_MAC
