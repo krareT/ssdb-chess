@@ -23,7 +23,7 @@ if test -z "$CC"; then
 	CC=gcc
 fi
 if test -z "$CXX"; then
-	CXX=g++
+	CXX=g++ -std=c++11
 fi
 
 case "$TARGET_OS" in
@@ -133,10 +133,12 @@ echo "SNAPPY_PATH=$SNAPPY_PATH" >> build_config.mk
 echo "CFLAGS=" >> build_config.mk
 echo "CFLAGS = -DNDEBUG -D__STDC_FORMAT_MACROS -Wall -O2 -Wno-sign-compare" >> build_config.mk
 echo "CFLAGS += ${PLATFORM_CFLAGS}" >> build_config.mk
-echo "CFLAGS += -I \"$LEVELDB_PATH/include\"" >> build_config.mk
+#echo "CFLAGS += -I \"$LEVELDB_PATH/include\"" >> build_config.mk
+echo "CFLAGS += -I \"$ROCKSDB_PATH/include\"" >> build_config.mk
 
 echo "CLIBS=" >> build_config.mk
-echo "CLIBS += \"$LEVELDB_PATH/libleveldb.a\"" >> build_config.mk
+#echo "CLIBS += \"$LEVELDB_PATH/libleveldb.a\"" >> build_config.mk
+echo "CLIBS += \"$ROCKSDB_PATH/librocksdb.dylib\"" >> build_config.mk
 echo "CLIBS += \"$SNAPPY_PATH/.libs/libsnappy.a\"" >> build_config.mk
 
 case "$TARGET_OS" in
