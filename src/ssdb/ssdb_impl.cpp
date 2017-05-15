@@ -1,7 +1,7 @@
 /*
-Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
-Use of this source code is governed by a BSD-style license that can be
-found in the LICENSE file.
+  Copyright (c) 2012-2014 The SSDB Authors. All rights reserved.
+  Use of this source code is governed by a BSD-style license that can be
+  found in the LICENSE file.
 */
 #include "ssdb_impl.h"
 #include "rocksdb/env.h"
@@ -28,11 +28,11 @@ SSDBImpl::~SSDBImpl(){
 	delete ldb;
     }
     /*if(options.block_cache){
-	delete options.block_cache;
-    }
-    if(options.filter_policy){
-	delete options.filter_policy;
-	}*/
+      delete options.block_cache;
+      }
+      if(options.filter_policy){
+      delete options.filter_policy;
+      }*/
 }
 
 SSDB* SSDB::open(const Options &opt, const std::string &dir){
@@ -41,17 +41,17 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     ssdb->options.IncreaseParallelism();
     ssdb->options.OptimizeLevelStyleCompaction();
     /*
-    ssdb->options.max_open_files = opt.max_open_files;
-    ssdb->options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
-    ssdb->options.block_cache = rocksdb::NewLRUCache(opt.cache_size * 1048576);
-    ssdb->options.block_size = opt.block_size * 1024;
-    ssdb->options.write_buffer_size = opt.write_buffer_size * 1024 * 1024;
-    ssdb->options.compaction_speed = opt.compaction_speed;
-    if(opt.compression == "yes"){
-	ssdb->options.compression = rocksdb::kSnappyCompression;
-    }else{
-	ssdb->options.compression = rocksdb::kNoCompression;
-    }
+      ssdb->options.max_open_files = opt.max_open_files;
+      ssdb->options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
+      ssdb->options.block_cache = rocksdb::NewLRUCache(opt.cache_size * 1048576);
+      ssdb->options.block_size = opt.block_size * 1024;
+      ssdb->options.write_buffer_size = opt.write_buffer_size * 1024 * 1024;
+      ssdb->options.compaction_speed = opt.compaction_speed;
+      if(opt.compression == "yes"){
+      ssdb->options.compression = rocksdb::kSnappyCompression;
+      }else{
+      ssdb->options.compression = rocksdb::kNoCompression;
+      }
     */
 
     rocksdb::Status status;
