@@ -25,8 +25,7 @@ static rocksdb::Slice slice(const Bytes &b){
     return rocksdb::Slice(b.data(), b.size());
 }
 
-class SSDBImpl : public SSDB
-{
+class SSDBImpl : public SSDB {
  private:
     friend class SSDB;
     rocksdb::DB* ldb;
@@ -34,7 +33,7 @@ class SSDBImpl : public SSDB
 	
     SSDBImpl();
  public:
-    BinlogQueue *binlogs;
+    BinlogQueue *_binlogs;
 	
     virtual ~SSDBImpl();
 

@@ -2,8 +2,9 @@
 BASE_DIR=`pwd`
 JEMALLOC_PATH="$BASE_DIR/deps/jemalloc-4.1.0"
 LEVELDB_PATH="$BASE_DIR/deps/leveldb-1.18"
+ROCKSDB_PATH="$BASE_DIR/deps/rocksdb"
 SNAPPY_PATH="$BASE_DIR/deps/snappy-1.1.0"
-
+CXX_FLAGS=-std=c++11
 # dependency check
 which autoconf > /dev/null 2>&1
 if [ "$?" -ne 0 ]; then
@@ -23,7 +24,7 @@ if test -z "$CC"; then
 	CC=gcc
 fi
 if test -z "$CXX"; then
-	CXX=g++ -std=c++11
+	CXX=g++
 fi
 
 case "$TARGET_OS" in
@@ -124,7 +125,7 @@ esac
 
 rm -f build_config.mk
 echo CC=$CC >> build_config.mk
-echo CXX=$CXX >> build_config.mk
+echo CXX=$CXX $CXX_FLAGS >> build_config.mk
 echo "MAKE=$MAKE" >> build_config.mk
 echo "LEVELDB_PATH=$LEVELDB_PATH" >> build_config.mk
 echo "JEMALLOC_PATH=$JEMALLOC_PATH" >> build_config.mk

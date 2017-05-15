@@ -48,12 +48,13 @@ class Binlog{
 // circular queue
 class BinlogQueue{
  private:
+    // TBD(kg): separate binlog into oplogCF
     rocksdb::DB *db;
-    uint64_t min_seq_;
-    uint64_t last_seq;
-    uint64_t tran_seq;
-    int capacity;
-    rocksdb::WriteBatch batch;
+    uint64_t _min_seq;
+    uint64_t _last_seq;
+    uint64_t _tran_seq;
+    int _capacity;
+    rocksdb::WriteBatch _batch;
 
     volatile bool thread_quit;
     static void* log_clean_thread_func(void *arg);
@@ -93,10 +94,10 @@ class BinlogQueue{
     int find_last(Binlog *log) const;
 	
     uint64_t min_seq() const{
-	return min_seq_;
+	return _min_seq;
     }
     uint64_t max_seq() const{
-	return last_seq;
+	return _last_seq;
     }
 		
     std::string stats() const;

@@ -9,27 +9,6 @@
 #include "ssdb_impl.h"
 
 inline static
-std::string encode_hsize_key(const Bytes &name){
-    std::string buf;
-    buf.reserve(name.size() + 1);
-    buf.append(1, DataType::HSIZE);
-    buf.append(name.data(), name.size());
-    return buf;
-}
-
-inline static
-int decode_hsize_key(const Bytes &slice, std::string *name){
-    Decoder decoder(slice.data(), slice.size());
-    if(decoder.skip(1) == -1){
-	return -1;
-    }
-    if(decoder.read_data(name) == -1){
-	return -1;
-    }
-    return 0;
-}
-
-inline static
 std::string encode_hash_key(const Bytes &name, const Bytes &key){
     std::string buf;
     buf.reserve(128);

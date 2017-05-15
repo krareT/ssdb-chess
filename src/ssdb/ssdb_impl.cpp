@@ -17,12 +17,12 @@
 
 SSDBImpl::SSDBImpl(){
     ldb = NULL;
-    binlogs = NULL;
+    _binlogs = NULL;
 }
 
 SSDBImpl::~SSDBImpl(){
-    if(binlogs){
-	delete binlogs;
+    if(_binlogs){
+	delete _binlogs;
     }
     if(ldb){
 	delete ldb;
@@ -61,7 +61,7 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
 	log_error("open db failed: %s", status.ToString().c_str());
 	goto err;
     }
-    ssdb->binlogs = new BinlogQueue(ssdb->ldb, opt.binlog, opt.binlog_capacity);
+    ssdb->_binlogs = new BinlogQueue(ssdb->ldb, opt.binlog, opt.binlog_capacity);
 
     return ssdb;
  err:
@@ -72,7 +72,7 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
 }
 
 int SSDBImpl::flushdb(){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
     int ret = 0;
     bool stop = false;
     while(!stop){
@@ -100,7 +100,7 @@ int SSDBImpl::flushdb(){
 	}
 	delete it;
     }
-    binlogs->flush();
+    _binlogs->flush();
     return ret;
 }
 
