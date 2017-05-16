@@ -18,7 +18,7 @@ static int incr_zsize(SSDBImpl *ssdb, const Bytes &name, int64_t incr);
  * @return -1: error, 0: item updated, 1: new item inserted
  */
 int SSDBImpl::zset(const Bytes &name, const Bytes &key, const Bytes &score, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     int ret = zset_one(this, name, key, score, log_type);
     if(ret >= 0){
@@ -27,7 +27,7 @@ int SSDBImpl::zset(const Bytes &name, const Bytes &key, const Bytes &score, char
 		return -1;
 	    }
 	}
-	rocksdb::Status s = binlogs->commit();
+	rocksdb::Status s = _binlogs->commit();
 	if(!s.ok()){
 	    log_error("zset error: %s", s.ToString().c_str());
 	    return -1;
@@ -37,7 +37,7 @@ int SSDBImpl::zset(const Bytes &name, const Bytes &key, const Bytes &score, char
 }
 
 int SSDBImpl::zdel(const Bytes &name, const Bytes &key, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     int ret = zdel_one(this, name, key, log_type);
     if(ret >= 0){
@@ -46,7 +46,7 @@ int SSDBImpl::zdel(const Bytes &name, const Bytes &key, char log_type){
 		return -1;
 	    }
 	}
-	rocksdb::Status s = binlogs->commit();
+	rocksdb::Status s = _binlogs->commit();
 	if(!s.ok()){
 	    log_error("zdel error: %s", s.ToString().c_str());
 	    return -1;
@@ -56,7 +56,7 @@ int SSDBImpl::zdel(const Bytes &name, const Bytes &key, char log_type){
 }
 
 int SSDBImpl::zincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::string old;
     int ret = this->zget(name, key, &old);
@@ -78,7 +78,7 @@ int SSDBImpl::zincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *ne
 		return -1;
 	    }
 	}
-	rocksdb::Status s = binlogs->commit();
+	rocksdb::Status s = _binlogs->commit();
 	if(!s.ok()){
 	    log_error("zset error: %s", s.ToString().c_str());
 	    return -1;
@@ -315,17 +315,17 @@ static int zset_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, const B
 	if(found){
 	    // delete zscore key
 	    k1 = encode_zscore_key(name, key, old_score);
-	    ssdb->binlogs->Delete(k1);
+	    ssdb->_binlogs->Delete(k1);
 	}
 
 	// add zscore key
 	k2 = encode_zscore_key(name, key, new_score);
-	ssdb->binlogs->Put(k2, "");
+	ssdb->_binlogs->Put(k2, "");
 
 	// update zset
 	k0 = encode_zset_key(name, key);
-	ssdb->binlogs->Put(k0, new_score);
-	ssdb->binlogs->add_log(log_type, BinlogCommand::ZSET, k0);
+	ssdb->_binlogs->Put(k0, new_score);
+	ssdb->_binlogs->add_log(log_type, BinlogCommand::ZSET, k0);
 
 	return found? 0 : 1;
     }
@@ -350,12 +350,12 @@ static int zdel_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, char lo
     std::string k0, k1;
     // delete zscore key
     k1 = encode_zscore_key(name, key, old_score);
-    ssdb->binlogs->Delete(k1);
+    ssdb->_binlogs->Delete(k1);
 
     // delete zset
     k0 = encode_zset_key(name, key);
-    ssdb->binlogs->Delete(k0);
-    ssdb->binlogs->add_log(log_type, BinlogCommand::ZDEL, k0);
+    ssdb->_binlogs->Delete(k0);
+    ssdb->_binlogs->add_log(log_type, BinlogCommand::ZDEL, k0);
 
     return 1;
 }
@@ -365,15 +365,15 @@ static int incr_zsize(SSDBImpl *ssdb, const Bytes &name, int64_t incr){
     size += incr;
     std::string size_key = encode_zsize_key(name);
     if(size == 0){
-	ssdb->binlogs->Delete(size_key);
+	ssdb->_binlogs->Delete(size_key);
     }else{
-	ssdb->binlogs->Put(size_key, rocksdb::Slice((char *)&size, sizeof(int64_t)));
+	ssdb->_binlogs->Put(size_key, rocksdb::Slice((char *)&size, sizeof(int64_t)));
     }
     return 0;
 }
 
 int64_t SSDBImpl::zfix(const Bytes &name){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
     std::string it_start, it_end;
     Iterator *it;
     rocksdb::Status s;

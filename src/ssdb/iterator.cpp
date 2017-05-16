@@ -133,7 +133,9 @@ void HIterator::return_val(bool onoff){
     this->return_val_ = onoff;
 }
 
+// TBD(kg): refactor HIterator since we've changed the layout of key, field, value
 bool HIterator::next(){
+    /*
     while(it->next()){
 	Bytes ks = it->key();
 	Bytes vs = it->val();
@@ -153,7 +155,7 @@ bool HIterator::next(){
 	    this->val.assign(vs.data(), vs.size());
 	}
 	return true;
-    }
+	}*/
     return false;
 }
 

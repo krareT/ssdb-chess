@@ -37,7 +37,7 @@ static int qdel_one(SSDBImpl *ssdb, const Bytes &name, uint64_t seq){
     std::string key = encode_qitem_key(name, seq);
     rocksdb::Status s;
 
-    ssdb->binlogs->Delete(key);
+    ssdb->_binlogs->Delete(key);
     return 0;
 }
 
@@ -45,7 +45,7 @@ static int qset_one(SSDBImpl *ssdb, const Bytes &name, uint64_t seq, const Bytes
     std::string key = encode_qitem_key(name, seq);
     rocksdb::Status s;
 
-    ssdb->binlogs->Put(key, slice(item));
+    ssdb->_binlogs->Put(key, slice(item));
     return 0;
 }
 
@@ -56,11 +56,11 @@ static int64_t incr_qsize(SSDBImpl *ssdb, const Bytes &name, int64_t incr){
     }
     size += incr;
     if(size <= 0){
-	ssdb->binlogs->Delete(encode_qsize_key(name));
+	ssdb->_binlogs->Delete(encode_qsize_key(name));
 	qdel_one(ssdb, name, QFRONT_SEQ);
 	qdel_one(ssdb, name, QBACK_SEQ);
     }else{
-	ssdb->binlogs->Put(encode_qsize_key(name), rocksdb::Slice((char *)&size, sizeof(size)));
+	ssdb->_binlogs->Put(encode_qsize_key(name), rocksdb::Slice((char *)&size, sizeof(size)));
     }
     return size;
 }
@@ -117,7 +117,7 @@ int SSDBImpl::qback(const Bytes &name, std::string *item){
 }
 
 int SSDBImpl::qset_by_seq(const Bytes &name, uint64_t seq, const Bytes &item, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
     uint64_t min_seq, max_seq;
     int ret;
     int64_t size = this->qsize(name);
@@ -139,9 +139,9 @@ int SSDBImpl::qset_by_seq(const Bytes &name, uint64_t seq, const Bytes &item, ch
     }
 
     std::string buf = encode_qitem_key(name, seq);
-    binlogs->add_log(log_type, BinlogCommand::QSET, buf);
+    _binlogs->add_log(log_type, BinlogCommand::QSET, buf);
 
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("Write error!");
 	return -1;
@@ -151,7 +151,7 @@ int SSDBImpl::qset_by_seq(const Bytes &name, uint64_t seq, const Bytes &item, ch
 
 // return: 0: index out of range, -1: error, 1: ok
 int SSDBImpl::qset(const Bytes &name, int64_t index, const Bytes &item, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
     int64_t size = this->qsize(name);
     if(size == -1){
 	return -1;
@@ -183,9 +183,9 @@ int SSDBImpl::qset(const Bytes &name, int64_t index, const Bytes &item, char log
 
     //log_info("qset %s %" PRIu64 "", hexmem(name.data(), name.size()).c_str(), seq);
     std::string buf = encode_qitem_key(name, seq);
-    binlogs->add_log(log_type, BinlogCommand::QSET, buf);
+    _binlogs->add_log(log_type, BinlogCommand::QSET, buf);
 	
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("Write error!");
 	return -1;
@@ -194,7 +194,7 @@ int SSDBImpl::qset(const Bytes &name, int64_t index, const Bytes &item, char log
 }
 
 int64_t SSDBImpl::_qpush(const Bytes &name, const Bytes &item, uint64_t front_or_back_seq, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     int ret;
     // generate seq
@@ -231,9 +231,9 @@ int64_t SSDBImpl::_qpush(const Bytes &name, const Bytes &item, uint64_t front_or
 
     std::string buf = encode_qitem_key(name, seq);
     if(front_or_back_seq == QFRONT_SEQ){
-	binlogs->add_log(log_type, BinlogCommand::QPUSH_FRONT, buf);
+	_binlogs->add_log(log_type, BinlogCommand::QPUSH_FRONT, buf);
     }else{
-	binlogs->add_log(log_type, BinlogCommand::QPUSH_BACK, buf);
+	_binlogs->add_log(log_type, BinlogCommand::QPUSH_BACK, buf);
     }
 	
     // update size
@@ -242,7 +242,7 @@ int64_t SSDBImpl::_qpush(const Bytes &name, const Bytes &item, uint64_t front_or
 	return -1;
     }
 
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("Write error! %s", s.ToString().c_str());
 	return -1;
@@ -259,7 +259,7 @@ int64_t SSDBImpl::qpush_back(const Bytes &name, const Bytes &item, char log_type
 }
 
 int SSDBImpl::_qpop(const Bytes &name, std::string *item, uint64_t front_or_back_seq, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 	
     int ret;
     uint64_t seq;
@@ -286,9 +286,9 @@ int SSDBImpl::_qpop(const Bytes &name, std::string *item, uint64_t front_or_back
     }
 
     if(front_or_back_seq == QFRONT_SEQ){
-	binlogs->add_log(log_type, BinlogCommand::QPOP_FRONT, name.String());
+	_binlogs->add_log(log_type, BinlogCommand::QPOP_FRONT, name.String());
     }else{
-	binlogs->add_log(log_type, BinlogCommand::QPOP_BACK, name.String());
+	_binlogs->add_log(log_type, BinlogCommand::QPOP_BACK, name.String());
     }
 
     // update size
@@ -307,7 +307,7 @@ int SSDBImpl::_qpop(const Bytes &name, std::string *item, uint64_t front_or_back
 	}
     }
 		
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("Write error! %s", s.ToString().c_str());
 	return -1;
@@ -375,7 +375,7 @@ int SSDBImpl::qrlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
 }
 
 int SSDBImpl::qfix(const Bytes &name){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
     std::string key_s = encode_qitem_key(name, QITEM_MIN_SEQ - 1);
     std::string key_e = encode_qitem_key(name, QITEM_MAX_SEQ);
 
@@ -405,16 +405,16 @@ int SSDBImpl::qfix(const Bytes &name){
     }
 	
     if(count == 0){
-	this->binlogs->Delete(encode_qsize_key(name));
+	this->_binlogs->Delete(encode_qsize_key(name));
 	qdel_one(this, name, QFRONT_SEQ);
 	qdel_one(this, name, QBACK_SEQ);
     }else{
-	this->binlogs->Put(encode_qsize_key(name), rocksdb::Slice((char *)&count, sizeof(count)));
+	this->_binlogs->Put(encode_qsize_key(name), rocksdb::Slice((char *)&count, sizeof(count)));
 	qset_one(this, name, QFRONT_SEQ, Bytes(&seq_min, sizeof(seq_min)));
 	qset_one(this, name, QBACK_SEQ, Bytes(&seq_max, sizeof(seq_max)));
     }
 		
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("Write error!");
 	return -1;

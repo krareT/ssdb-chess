@@ -75,7 +75,7 @@ void* BackendSync::_run_thread(void *arg){
 	link->noblock(false);
 
 	SSDBImpl *ssdb = (SSDBImpl *)backend->ssdb;
-	BinlogQueue *logs = ssdb->binlogs;
+	BinlogQueue *logs = ssdb->_binlogs;
 
 	Client client(backend);
 	client.link = link;
@@ -213,7 +213,7 @@ void BackendSync::Client::init(){
 	}
 	
 	SSDBImpl *ssdb = (SSDBImpl *)backend->ssdb;
-	BinlogQueue *logs = ssdb->binlogs;
+	BinlogQueue *logs = ssdb->_binlogs;
 	if(last_seq != 0 && (last_seq > logs->max_seq() || last_seq < logs->min_seq())){
 		log_error("%s:%d fd: %d OUT_OF_SYNC! seq: %" PRIu64 " not in [%" PRIu64 ", %" PRIu64 "]",
 			link->remote_ip, link->remote_port, link->fd(),

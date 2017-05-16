@@ -65,7 +65,8 @@ class SSDB{
 
     virtual int64_t hsize(const Bytes &name) = 0;
     virtual int64_t hclear(const Bytes &name) = 0;
-    virtual int hget(const Bytes &name, const Bytes &key, std::string *val) = 0;
+    virtual int hget(const Bytes& key, std::string* val) = 0;
+    virtual int hget(const Bytes& key, const Bytes& field, std::string* val) = 0;
     virtual int hlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
 		      std::vector<std::string> *list) = 0;
     virtual int hrlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,

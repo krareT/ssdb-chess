@@ -247,8 +247,9 @@ int SSDBImpl::key_range(std::vector<std::string> *keys){
 	}
     }
     delete it;
-	
-    it = this->iterator(encode_hsize_key(""), "", 1);
+
+    // TBD(kg): use hkey instead of hsize_key
+    /*it = this->iterator(encode_hsize_key(""), "", 1);
     if(it->next()){
 	Bytes ks = it->key();
 	if(ks.data()[0] == DataType::HSIZE){
@@ -274,7 +275,7 @@ int SSDBImpl::key_range(std::vector<std::string> *keys){
 	    }
 	}
     }
-    delete it;
+    delete it;*/
 	
     it = this->iterator(encode_zsize_key(""), "", 1);
     if(it->next()){

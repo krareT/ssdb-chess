@@ -77,6 +77,7 @@ class BinlogQueue{
     void Put(const rocksdb::Slice& key, const rocksdb::Slice& value);
     // rocksdb delete
     void Delete(const rocksdb::Slice& key);
+    
     void add_log(char type, char cmd, const rocksdb::Slice &key);
     void add_log(char type, char cmd, const std::string &key);
 		

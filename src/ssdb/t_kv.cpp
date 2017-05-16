@@ -6,7 +6,7 @@
 #include "t_kv.h"
 
 int SSDBImpl::multi_set(const std::vector<Bytes> &kvs, int offset, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::vector<Bytes>::const_iterator it;
     it = kvs.begin() + offset;
@@ -19,10 +19,10 @@ int SSDBImpl::multi_set(const std::vector<Bytes> &kvs, int offset, char log_type
 	}
 	const Bytes &val = *(it + 1);
 	std::string buf = encode_kv_key(key);
-	binlogs->Put(buf, slice(val));
-	binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+	_binlogs->Put(buf, slice(val));
+	_binlogs->add_log(log_type, BinlogCommand::KSET, buf);
     }
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("multi_set error: %s", s.ToString().c_str());
 	return -1;
@@ -31,17 +31,17 @@ int SSDBImpl::multi_set(const std::vector<Bytes> &kvs, int offset, char log_type
 }
 
 int SSDBImpl::multi_del(const std::vector<Bytes> &keys, int offset, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::vector<Bytes>::const_iterator it;
     it = keys.begin() + offset;
     for(; it != keys.end(); it++){
 	const Bytes &key = *it;
 	std::string buf = encode_kv_key(key);
-	binlogs->Delete(buf);
-	binlogs->add_log(log_type, BinlogCommand::KDEL, buf);
+	_binlogs->Delete(buf);
+	_binlogs->add_log(log_type, BinlogCommand::KDEL, buf);
     }
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("multi_del error: %s", s.ToString().c_str());
 	return -1;
@@ -55,12 +55,12 @@ int SSDBImpl::set(const Bytes &key, const Bytes &val, char log_type){
 	//return -1;
 	return 0;
     }
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::string buf = encode_kv_key(key);
-    binlogs->Put(buf, slice(val));
-    binlogs->add_log(log_type, BinlogCommand::KSET, buf);
-    rocksdb::Status s = binlogs->commit();
+    _binlogs->Put(buf, slice(val));
+    _binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("set error: %s", s.ToString().c_str());
 	return -1;
@@ -74,7 +74,7 @@ int SSDBImpl::setnx(const Bytes &key, const Bytes &val, char log_type){
 	//return -1;
 	return 0;
     }
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::string tmp;
     int found = this->get(key, &tmp);
@@ -82,9 +82,9 @@ int SSDBImpl::setnx(const Bytes &key, const Bytes &val, char log_type){
 	return 0;
     }
     std::string buf = encode_kv_key(key);
-    binlogs->Put(buf, slice(val));
-    binlogs->add_log(log_type, BinlogCommand::KSET, buf);
-    rocksdb::Status s = binlogs->commit();
+    _binlogs->Put(buf, slice(val));
+    _binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("set error: %s", s.ToString().c_str());
 	return -1;
@@ -98,13 +98,13 @@ int SSDBImpl::getset(const Bytes &key, std::string *val, const Bytes &newval, ch
 	//return -1;
 	return 0;
     }
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     int found = this->get(key, val);
     std::string buf = encode_kv_key(key);
-    binlogs->Put(buf, slice(newval));
-    binlogs->add_log(log_type, BinlogCommand::KSET, buf);
-    rocksdb::Status s = binlogs->commit();
+    _binlogs->Put(buf, slice(newval));
+    _binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("set error: %s", s.ToString().c_str());
 	return -1;
@@ -114,12 +114,12 @@ int SSDBImpl::getset(const Bytes &key, std::string *val, const Bytes &newval, ch
 
 
 int SSDBImpl::del(const Bytes &key, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::string buf = encode_kv_key(key);
-    binlogs->Delete(buf);
-    binlogs->add_log(log_type, BinlogCommand::KDEL, buf);
-    rocksdb::Status s = binlogs->commit();
+    _binlogs->Delete(buf);
+    _binlogs->add_log(log_type, BinlogCommand::KDEL, buf);
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("del error: %s", s.ToString().c_str());
 	return -1;
@@ -128,7 +128,7 @@ int SSDBImpl::del(const Bytes &key, char log_type){
 }
 
 int SSDBImpl::incr(const Bytes &key, int64_t by, int64_t *new_val, char log_type){
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 
     std::string old;
     int ret = this->get(key, &old);
@@ -144,10 +144,10 @@ int SSDBImpl::incr(const Bytes &key, int64_t by, int64_t *new_val, char log_type
     }
 
     std::string buf = encode_kv_key(key);
-    binlogs->Put(buf, str(*new_val));
-    binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+    _binlogs->Put(buf, str(*new_val));
+    _binlogs->add_log(log_type, BinlogCommand::KSET, buf);
 
-    rocksdb::Status s = binlogs->commit();
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("del error: %s", s.ToString().c_str());
 	return -1;
@@ -204,7 +204,7 @@ int SSDBImpl::setbit(const Bytes &key, int bitoffset, int on, char log_type){
 	log_error("empty key!");
 	return 0;
     }
-    Transaction trans(binlogs);
+    Transaction trans(_binlogs);
 	
     std::string val;
     int ret = this->get(key, &val);
@@ -225,9 +225,9 @@ int SSDBImpl::setbit(const Bytes &key, int bitoffset, int on, char log_type){
     }
 
     std::string buf = encode_kv_key(key);
-    binlogs->Put(buf, val);
-    binlogs->add_log(log_type, BinlogCommand::KSET, buf);
-    rocksdb::Status s = binlogs->commit();
+    _binlogs->Put(buf, val);
+    _binlogs->add_log(log_type, BinlogCommand::KSET, buf);
+    rocksdb::Status s = _binlogs->commit();
     if(!s.ok()){
 	log_error("set error: %s", s.ToString().c_str());
 	return -1;

@@ -38,8 +38,9 @@ int SSDBImpl::hdel(const Bytes &name, const Bytes &key, char log_type){
     return ret;
 }
 
+// TBD(kg): not supported yet
 int SSDBImpl::hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type){
-    Transaction trans(_binlogs);
+    /*Transaction trans(_binlogs);
 
     std::string old;
     int ret = this->hget(name, key, &old);
@@ -64,7 +65,8 @@ int SSDBImpl::hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *ne
 	    return -1;
 	}
     }
-    return 1;
+    return 1;*/
+    return 0;
 }
 
 // field count under the key
@@ -89,8 +91,9 @@ int64_t SSDBImpl::hsize(const Bytes &name){
     return 0;
 }
 
+// TBD(kg): not supported yet
 int64_t SSDBImpl::hclear(const Bytes &name){
-    int64_t count = 0;
+    /*int64_t count = 0;
     while(1){
 	HIterator *it = this->hscan(name, "", "", 1000);
 	int num = 0;
@@ -110,36 +113,55 @@ int64_t SSDBImpl::hclear(const Bytes &name){
 	count += num;
     }
     return count;
+    */
+    return 0;
 }
 
-int SSDBImpl::hget(const Bytes &name, const Bytes &key, std::string *val){
-    std::string dbkey = encode_hash_key(name, key);
+int SSDBImpl::hget(const Bytes &key, std::string *val) {
+    std::string dbkey = encode_hash_key(key);
     rocksdb::Status s = ldb->Get(rocksdb::ReadOptions(), dbkey, val);
-    if(s.IsNotFound()){
+    if (s.IsNotFound()) {
 	return 0;
     }
-    if(!s.ok()){
+    if (!s.ok()) {
 	log_error("%s", s.ToString().c_str());
 	return -1;
     }
     return 1;
 }
 
-HIterator* SSDBImpl::hscan(const Bytes &name, const Bytes &start, const Bytes &end, uint64_t limit){
-    std::string key_start, key_end;
+int SSDBImpl::hget(const Bytes &key, const Bytes &field, std::string *val) {
+    std::string dbkey = encode_hash_key(key);
+    std::string dbval;
+    rocksdb::Status s = ldb->Get(rocksdb::ReadOptions(), dbkey, &dbval);
+    if (s.IsNotFound()) {
+	return 0;
+    }
+    if (!s.ok()) {
+	log_error("%s", s.ToString().c_str());
+	return -1;
+    }
+    return get_hash_value(Bytes(*val), field, val);
+}
 
-    key_start = encode_hash_key(name, start);
-    if(!end.empty()){
-	key_end = encode_hash_key(name, end);
+// TBD(kg)...
+HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &end, uint64_t limit){
+    /*std::string field_start, field_end;
+
+    key_start = encode_hash_key(key, field_start);
+    if (!end.empty()) {
+	field_end = encode_hash_key(name, end);
     }
     //dump(key_start.data(), key_start.size(), "scan.start");
     //dump(key_end.data(), key_end.size(), "scan.end");
 
-    return new HIterator(this->iterator(key_start, key_end, limit), name);
+    return new HIterator(this->iterator(key_start, key_end, limit), name);*/
+    return 0;
 }
 
+// TBD(kg)...
 HIterator* SSDBImpl::hrscan(const Bytes &name, const Bytes &start, const Bytes &end, uint64_t limit){
-    std::string key_start, key_end;
+    /*std::string key_start, key_end;
 
     key_start = encode_hash_key(name, start);
     if(start.empty()){
@@ -152,6 +174,8 @@ HIterator* SSDBImpl::hrscan(const Bytes &name, const Bytes &start, const Bytes &
     //dump(key_end.data(), key_end.size(), "scan.end");
 
     return new HIterator(this->rev_iterator(key_start, key_end, limit), name);
+    */
+    return 0;
 }
 
 static void get_hnames(Iterator *it, std::vector<std::string> *list){
@@ -209,38 +233,49 @@ int SSDBImpl::hrlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
 }
 
 // returns the number of newly added items
-static int hset_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, const Bytes &val, char log_type){
-    if(name.empty() || key.empty()){
-	log_error("empty name or key!");
+static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const Bytes &val, char log_type){
+    if(key.empty() || field.empty()){
+	log_error("empty key or field!");
 	return -1;
     }
-    if(name.size() > SSDB_KEY_LEN_MAX ){
-	log_error("name too long! %s", hexmem(name.data(), name.size()).c_str());
-	return -1;
-    }
-    if(key.size() > SSDB_KEY_LEN_MAX){
+    if(key.size() > SSDB_KEY_LEN_MAX ){
 	log_error("key too long! %s", hexmem(key.data(), key.size()).c_str());
 	return -1;
     }
-    std::string hkey = encode_hash_key(name, key);
-    ssdb->_binlogs->Put(hkey, slice(val));
-    ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
-    return 0;
+    if(field.size() > SSDB_KEY_LEN_MAX){
+	log_error("field too long! %s", hexmem(field.data(), field.size()).c_str());
+	return -1;
+    }
+    // TBD(kg): should change to Merge()
+    std::string hkey = encode_hash_key(key);
+    std::string old_value, new_value;
+    ssdb->hget(hkey, &old_value);
+    int ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
+    if (ret == 0) {
+	ssdb->_binlogs->Put(hkey, slice(new_value));
+	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
+    }
+    return ret;
 }
 
-static int hdel_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, char log_type){
-    if(name.size() > SSDB_KEY_LEN_MAX ){
-	log_error("name too long! %s", hexmem(name.data(), name.size()).c_str());
+static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char log_type) {
+    if (key.size() > SSDB_KEY_LEN_MAX ){
+	log_error("name too long! %s", hexmem(key.data(), key.size()).c_str());
 	return -1;
     }
-    if(key.size() > SSDB_KEY_LEN_MAX){
-	log_error("key too long! %s", hexmem(key.data(), key.size()).c_str());
+    if (field.size() > SSDB_KEY_LEN_MAX) {
+	log_error("key too long! %s", hexmem(field.data(), field.size()).c_str());
 	return -1;
     }
-    std::string hkey = encode_hash_key(name, key);
-    ssdb->_binlogs->Delete(hkey);
-    ssdb->_binlogs->add_log(log_type, BinlogCommand::HDEL, hkey);
-	
-    return 1;
+    // TBD(kg): should change to Merge()
+    std::string hkey = encode_hash_key(key);
+    std::string old_value, new_value;
+    ssdb->hget(hkey, &old_value);
+    int ret = remove_hash_value(Bytes(old_value), field, &new_value);
+    if (ret == 1) { // remove as expected
+	ssdb->_binlogs->Put(hkey, slice(new_value));
+	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
+    }
+    return ret;
 }
 
