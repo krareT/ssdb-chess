@@ -268,28 +268,6 @@ class Decoder{
 	size -= len;
 	return 1 + len;
     }
-
-    int read_8_data_s(std::string *ret = NULL) { // 's' stands for safe...
-	if (size < 1) {
-	    return -1;
-	}
-	int len = (uint8_t)p[0];
-	p += 1;
-	size -= 1;
-	if (size < len) {
-	    return -1;
-	}
-	if (ret) {
-	    if (ret->capacity() < len) {
-		ret->clear();
-		ret->reserve(len);
-	    }
-	    ret->assign(p, len);
-	}
-	p += len;
-	size -= len;
-	return 1 + len;
-    }
 };
 
 #endif

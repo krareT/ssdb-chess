@@ -145,18 +145,21 @@ int SSDBImpl::hget(const Bytes &key, const Bytes &field, std::string *val) {
 }
 
 // TBD(kg)...
-HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &end, uint64_t limit){
+HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &end,
+			   uint64_t limit) {
     /*std::string field_start, field_end;
 
     key_start = encode_hash_key(key, field_start);
     if (!end.empty()) {
 	field_end = encode_hash_key(name, end);
-    }
+	}
     //dump(key_start.data(), key_start.size(), "scan.start");
     //dump(key_end.data(), key_end.size(), "scan.end");
 
-    return new HIterator(this->iterator(key_start, key_end, limit), name);*/
-    return 0;
+    return new HIterator(this->iterator(key_start, key_end, limit), name);
+    */
+    std::string key_start = encode_hash_key(key);
+    return new HIterator(this->iterator(key_start, "", limit), key);
 }
 
 // TBD(kg)...
@@ -178,37 +181,41 @@ HIterator* SSDBImpl::hrscan(const Bytes &name, const Bytes &start, const Bytes &
     return 0;
 }
 
-static void get_hnames(Iterator *it, std::vector<std::string> *list){
-    /*while(it->next()){
+static void get_hnames(Iterator *it, std::vector<std::string> *list) {
+    while (it->next()) {
 	Bytes ks = it->key();
-	if(ks.data()[0] != DataType::HSIZE){
+	if (ks.data()[0] != DataType::HASH) {
 	    break;
 	}
 	std::string n;
-	if(decode_hsize_key(ks, &n) == -1){
+	if (decode_hash_key(ks, &n) == -1) {
 	    continue;
 	}
 	list->push_back(n);
-    }*/
+    }
 }
 
 // list of keys between [name_s, name_e)
 // TBD(kg): since we'll switch from { key+field: value }  to { key: field+value }, no
 // need to enumerate keys using hsize
-int SSDBImpl::hlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
-		    std::vector<std::string> *list){
-    /*std::string start;
+int SSDBImpl::hlist(const Bytes &key_s, const Bytes &key_e, uint64_t limit,
+		    std::vector<std::string> *list) {
+    std::string start;
     std::string end;
-	
-    start = encode_hsize_key(name_s);
+
+    start = encode_hash_key(key_s);
+    if (!key_e.empty()) {
+	end = encode_hash_key(key_e);
+    }
+    /*start = encode_hsize_key(name_s);
     if(!name_e.empty()){
 	end = encode_hsize_key(name_e);
-    }
+	}*/
+    
 	
     Iterator *it = this->iterator(start, end, limit);
     get_hnames(it, list);
     delete it;
-    */
     return 0;
 }
 

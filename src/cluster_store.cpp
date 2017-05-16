@@ -49,6 +49,7 @@ int ClusterStore::load_kv_node(int id, Node *node){
 
 int ClusterStore::del_kv_node(int id){
 	std::string key = str(id);
+	// TBD(kg)...
 	int ret = db->hdel(kv_node_list_key, key);
 	if(ret == -1){
 		log_error("cluster store error!");
@@ -63,7 +64,8 @@ int ClusterStore::load_kv_node_list(std::vector<Node> *list){
 	if(it){
 		while(it->next()){
 			Node node;
-			this->load_kv_node(str_to_int(it->key), &node);
+			// TBD(kg)...
+			this->load_kv_node(str_to_int(it->_key), &node);
 			log_debug("load node: %d - %s %s:%d", node.id, node.range.str().c_str(),
 				node.ip.c_str(), node.port);
 			list->push_back(node);

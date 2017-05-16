@@ -54,17 +54,19 @@ class KIterator{
 
 class HIterator{
  public:
-    std::string name;
-    std::string key;
-    std::string val;
+    std::string _key;
+    std::string _field;
+    std::string _value;
 
-    HIterator(Iterator *it, const Bytes &name);
+    HIterator(Iterator *it, const Bytes &key);
     ~HIterator();
     void return_val(bool onoff);
     bool next();
  private:
-    Iterator *it;
-    bool return_val_;
+    Iterator *_it;
+    bool _return_val;
+    std::vector<StrPair> _values;
+    int _index = -1;
 };
 
 

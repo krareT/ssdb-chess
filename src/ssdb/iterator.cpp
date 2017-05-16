@@ -3,6 +3,8 @@
   Use of this source code is governed by a BSD-style license that can be
   found in the LICENSE file.
 */
+#include "../include.h"
+
 #include "iterator.h"
 #include "t_kv.h"
 #include "t_hash.h"
@@ -15,8 +17,7 @@
 Iterator::Iterator(rocksdb::Iterator *it,
 		   const std::string &end,
 		   uint64_t limit,
-		   Direction direction)
-{
+		   Direction direction) {
     this->it = it;
     this->end = end;
     this->limit = limit;
@@ -118,45 +119,54 @@ bool KIterator::next(){
 }
 
 /* HASH */
-
-HIterator::HIterator(Iterator *it, const Bytes &name){
-    this->it = it;
-    this->name.assign(name.data(), name.size());
-    this->return_val_ = true;
+// by employing 'key', iterator could only reply
+// all {fields, value} under one key
+HIterator::HIterator(Iterator *it, const Bytes &key) {
+    this->_it = it;
+    this->_key.assign(key.data(), key.size());
+    this->_return_val = true;
+    this->_index = -1;
+    this->_values.clear();
 }
 
 HIterator::~HIterator(){
-    delete it;
+    delete _it;
 }
 
 void HIterator::return_val(bool onoff){
-    this->return_val_ = onoff;
+    this->_return_val = onoff;
 }
 
 // TBD(kg): refactor HIterator since we've changed the layout of key, field, value
-bool HIterator::next(){
-    /*
-    while(it->next()){
-	Bytes ks = it->key();
-	Bytes vs = it->val();
-	//dump(ks.data(), ks.size(), "z.next");
-	//dump(vs.data(), vs.size(), "z.next");
-	if(ks.data()[0] != DataType::HASH){
-	    return false;
+bool HIterator::next() {
+    if (_index == -1) { // init first, mutex ?
+	_index = 0;
+	if (_it->next()) {
+	    Bytes ks = _it->key();
+	    std::string key;
+	    if (ks.data()[0] != DataType::HASH ||
+		decode_hash_key(ks, &key) == -1 ||
+		key != this->_key) {
+		return false;
+	    }
+
+	    if (_return_val) {
+		Bytes vs = _it->val();
+		std::vector<StrPair> values;
+		if (get_hash_values(Bytes(key), values) == -1) {
+		    return false;
+		}
+	    }
 	}
-	std::string n;
-	if(decode_hash_key(ks, &n, &key) == -1){
-	    continue;
-	}
-	if(n != this->name){
-	    return false;
-	}
-	if(return_val_){
-	    this->val.assign(vs.data(), vs.size());
-	}
+    }
+    if (_index >= _values.size()) {
+	return false;
+    } else {
+	this->_field = _values[_index].first;
+	this->_value = _values[_index].second;
+	_index++;
 	return true;
-	}*/
-    return false;
+    }
 }
 
 /* ZSET */

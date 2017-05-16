@@ -6,6 +6,7 @@
 #ifndef SSDB_HASH_H_
 #define SSDB_HASH_H_
 
+#include "../include.h"
 #include "ssdb_impl.h"
 
 static const int kKeyByteLen = 1;
@@ -29,7 +30,7 @@ int decode_hash_key(const Bytes &slice, std::string *key) {
     if (decoder.skip(1) == -1) {
 	return -1;
     }
-    if (decoder.read_8_data_s(key) == -1) {
+    if (decoder.read_8_data(key) == -1) {
 	return -1;
     }
     return 0;
@@ -48,24 +49,7 @@ std::string encode_hash_value(const Bytes &field, const Bytes &value) {
     return buf;
 }
 
-/*
-inline static
-std::string append_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value) {
-    std::string encoded_value = encode_hash_value(field, value);
-    if (slice.empty()) {
-	return encoded_value;
-    } else {
-	// total len + {field1:value1} ; {field2:value2} ; ...
-	std::string buf;
-	buf.reserve(slice.size() + 1 + encoded_value.size());
-	buf.append(slice.size(), slice.data());
-	buf.append(1, ';');
-	buf.append(encoded_value.size(), encoded_value.data());
-    }
-    }*/
-
 // TBD(kg): string op should be optimized
-static
 int insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
 			     std::string* ret) {
     /*
@@ -103,11 +87,11 @@ int insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes
     while (!decoder.is_end()) {
 	std::string elem_field, elem_value;
 	int field_len, value_len;
-	if ((field_len = decoder.read_8_data_s(&elem_field)) == -1) {
+	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
 	decoder.skip(1);
-	if ((value_len = decoder.read_8_data_s(&elem_value)) == -1) {
+	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
 	if (Bytes(field) == Bytes(elem_field)) {
@@ -130,7 +114,6 @@ int insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes
 // -1: error
 // 0: not exist
 // 1: done
-static
 int remove_hash_value(const Bytes& slice, const Bytes& field,
 		      std::string* ret) {
     auto iter = std::search(slice.data(), slice.data() + slice.size(),
@@ -145,11 +128,11 @@ int remove_hash_value(const Bytes& slice, const Bytes& field,
     while (!decoder.is_end()) {
 	std::string elem_field, elem_value;
 	int field_len, value_len;
-	if ((field_len = decoder.read_8_data_s(&elem_field)) == -1) {
+	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
 	decoder.skip(1);
-	if ((value_len = decoder.read_8_data_s(&elem_value)) == -1) {
+	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
 	if (Bytes(field) == Bytes(elem_field)) {
@@ -178,7 +161,7 @@ int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
     while (!decoder.is_end()) {
 	std::string elem_field, elem_value;
 	int field_len, value_len;
-	if ((field_len = decoder.read_8_data_s(&elem_field)) == -1) {
+	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
 	if (Bytes(field) == Bytes(elem_field)) {
@@ -186,7 +169,7 @@ int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
 	    return 1;
 	} else {
 	    decoder.skip(1);
-	    if ((value_len = decoder.read_8_data_s(&elem_value)) == -1) {
+	    if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 		return -1;
 	    }
 	}
@@ -194,44 +177,26 @@ int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
     return 0;
 }
 
-static
-int decode_hash_value(const Bytes &slice, std::string *field, std::string *value) {
-    Decoder decoder(slice.data(), slice.size());
-    if (decoder.read_8_data_s(field) == -1) {
-	return -1;
-    }
-    if (decoder.skip(1) == -1) { // field:value, separater
-	return -1;
-    }
-    if (decoder.read_8_data_s(value) == -1) {
-	return -1;
-    }
-    return 0;
-}
 
-inline static
-int find_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
-    Decoder decoder(slice.data(), slice.size());
-    if (decoder.is_end()) {
-	// TBD(kg): some log needed
-	return -1;
+static
+int get_hash_values(const Bytes& slice, std::vector<StrPair>& values) {
+    if (slice.empty()) {
+	return 0;
     }
-    decoder.skip(kTotalByteLen);
+    Decoder decoder(slice.data(), slice.size());
     while (!decoder.is_end()) {
 	std::string elem_field, elem_value;
-	if (decoder.read_8_data_s(&elem_field) == -1) {
+	int field_len, value_len;
+	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
 	decoder.skip(1);
-	if (decoder.read_8_data_s(&elem_value) == -1) {
+	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
-	if (field == elem_field) {
-	    *value = elem_value;
-	    return 0;
-	}
+	values.push_back(std::make_pair(elem_field, elem_value));
     }
-    return -1;
+    return 0;
 }
 
 #endif

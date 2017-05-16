@@ -392,7 +392,7 @@ bool SSDBServer::in_kv_range(const std::string &key){
 
 int proc_clear_binlog(NetworkServer *net, Link *link, const Request &req, Response *resp){
 	SSDBServer *serv = (SSDBServer *)net->data;
-	serv->ssdb->binlogs->flush();
+	serv->ssdb->_binlogs->flush();
 	resp->push_back("ok");
 	return 0;
 }
@@ -517,7 +517,7 @@ int proc_info(NetworkServer *net, Link *link, const Request &req, Response *resp
 	}
 
 	{
-		std::string s = serv->ssdb->binlogs->stats();
+		std::string s = serv->ssdb->_binlogs->stats();
 		resp->push_back("binlogs");
 		resp->push_back(s);
 	}

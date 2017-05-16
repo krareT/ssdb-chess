@@ -24,6 +24,11 @@ found in the LICENSE file.
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <map>
+#include <string>
+#include <vector>
+
+
 #include "version.h"
 
 #ifndef UINT64_MAX
@@ -33,6 +38,7 @@ found in the LICENSE file.
 	#define INT64_MAX		0x7fffffffffffffffLL
 #endif
 
+using StrPair = std::pair<std::string, std::string>;
 
 static inline double millitime(){
 	struct timeval now;

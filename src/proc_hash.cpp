@@ -178,8 +178,10 @@ int proc_hgetall(NetworkServer *net, Link *link, const Request &req, Response *r
     HIterator *it = serv->ssdb->hscan(req[1], "", "", 2000000000);
     resp->push_back("ok");
     while(it->next()){
-	resp->push_back(it->key);
-	resp->push_back(it->val);
+	//resp->push_back(it->key);
+	//resp->push_back(it->val);
+	resp->push_back(it->_field);
+	resp->push_back(it->_value);
     }
     delete it;
     return 0;
@@ -193,8 +195,10 @@ int proc_hscan(NetworkServer *net, Link *link, const Request &req, Response *res
     HIterator *it = serv->ssdb->hscan(req[1], req[2], req[3], limit);
     resp->push_back("ok");
     while(it->next()){
-	resp->push_back(it->key);
-	resp->push_back(it->val);
+	//resp->push_back(it->key);
+	//resp->push_back(it->val);
+	resp->push_back(it->_field);
+	resp->push_back(it->_value);
     }
     delete it;
     return 0;
@@ -208,8 +212,8 @@ int proc_hrscan(NetworkServer *net, Link *link, const Request &req, Response *re
     HIterator *it = serv->ssdb->hrscan(req[1], req[2], req[3], limit);
     resp->push_back("ok");
     while(it->next()){
-	resp->push_back(it->key);
-	resp->push_back(it->val);
+	resp->push_back(it->_field);
+	resp->push_back(it->_value);
     }
     delete it;
     return 0;
@@ -225,7 +229,7 @@ int proc_hkeys(NetworkServer *net, Link *link, const Request &req, Response *res
 
     resp->push_back("ok");
     while(it->next()){
-	resp->push_back(it->key);
+	resp->push_back(it->_field);
     }
     delete it;
     return 0;
@@ -240,7 +244,7 @@ int proc_hvals(NetworkServer *net, Link *link, const Request &req, Response *res
 
     resp->push_back("ok");
     while(it->next()){
-	resp->push_back(it->val);
+	resp->push_back(it->_value);
     }
     delete it;
     return 0;

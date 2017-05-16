@@ -402,8 +402,9 @@ int Slave::proc_sync(const Binlog &log, const std::vector<Bytes> &req){
 				if(req.size() != 2){
 					break;
 				}
+				// TBD(kg)...
 				std::string name, key;
-				if(decode_hash_key(log.key(), &name, &key) == -1){
+				/*if(decode_hash_key(log.key(), &name, &key) == -1){
 					break;
 				}
 				log_trace("hset %s %s",
@@ -411,12 +412,13 @@ int Slave::proc_sync(const Binlog &log, const std::vector<Bytes> &req){
 					hexmem(key.data(), key.size()).c_str());
 				if(ssdb->hset(name, key, req[1], log_type) == -1){
 					return -1;
-				}
+					}*/
 			}
 			break;
 		case BinlogCommand::HDEL:
 			{
-				std::string name, key;
+			    // TBD(kg)...
+			    /*std::string name, key;
 				if(decode_hash_key(log.key(), &name, &key) == -1){
 					break;
 				}
@@ -425,7 +427,7 @@ int Slave::proc_sync(const Binlog &log, const std::vector<Bytes> &req){
 					hexmem(key.data(), key.size()).c_str());
 				if(ssdb->hdel(name, key, log_type) == -1){
 					return -1;
-				}
+					}*/
 			}
 			break;
 		case BinlogCommand::ZSET:
