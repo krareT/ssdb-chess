@@ -8,6 +8,7 @@ found in the LICENSE file.
 
 #include <inttypes.h>
 #include <string>
+#include "../include.h"
 #include "../util/bytes.h"
 
 namespace rocksdb{

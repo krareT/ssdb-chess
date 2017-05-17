@@ -50,6 +50,7 @@ std::string encode_hash_value(const Bytes &field, const Bytes &value) {
 }
 
 // TBD(kg): string op should be optimized
+static
 int insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
 			     std::string* ret) {
     /*
@@ -90,32 +91,39 @@ int insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes
 	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
-	decoder.skip(1);
+	decoder.skip(1); // ':'
 	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
 	if (Bytes(field) == Bytes(elem_field)) {
-	    continue;
+	    ; // skip
 	} else {
-	    buf.append(elem_field.data(), field_len)
-		.append(1, ':')
-		.append(elem_value.size(), value_len);
-	    len += field_len + 1 + value_len;
+	    std::string encoded = encode_hash_value(elem_field, elem_value);
+	    buf.append(encoded.data(), encoded.size())
+		.append(1, ';');
+	    len += encoded.size() + 1;
+	}
+	if (!decoder.is_end()) {
+	    decoder.skip(1); // ';'
 	}
     }
-    buf.append(1, ';')
-	.append(encoded.data(), encoded.size());
+    // format till now: a4b4:14;
+    buf.append(encoded.data(), encoded.size());
     // shrink() could only be applied on 'string'
-    buf.resize(len + 1 + encoded.size());
+    buf.resize(len + encoded.size());
     *ret = buf;
-    return 0;
+    return 1;
 }
 
 // -1: error
 // 0: not exist
 // 1: done
+static
 int remove_hash_value(const Bytes& slice, const Bytes& field,
 		      std::string* ret) {
+    if (slice.empty()) {
+	return 0;
+    }
     auto iter = std::search(slice.data(), slice.data() + slice.size(),
 			    field.data(), field.data() + field.size());
     if (iter == slice.data() + slice.size()) { // not exist
@@ -131,18 +139,25 @@ int remove_hash_value(const Bytes& slice, const Bytes& field,
 	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
-	decoder.skip(1);
+	decoder.skip(1); // ':'
 	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
 	if (Bytes(field) == Bytes(elem_field)) {
-	    continue;
+	    ; // skip
 	} else {
-	    buf.append(elem_field.data(), field_len)
-		.append(1, ':')
-		.append(elem_value.size(), value_len);
-	    len += field_len + 1 + value_len;
+	    std::string encoded = encode_hash_value(elem_field, elem_value);
+	    buf.append(encoded.data(), encoded.size())
+		.append(1, ';');
+	    len += encoded.size() + 1;
 	}
+	if (!decoder.is_end()) {
+	    decoder.skip(1); // ';'
+	}
+    }
+    // remove tail ';'
+    if (!buf.empty()) {
+	len -= 1;
     }
     // shrink() could only be applied on 'string'
     buf.resize(len);
@@ -152,6 +167,9 @@ int remove_hash_value(const Bytes& slice, const Bytes& field,
 
 static
 int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
+    if (slice.empty()) {
+	return 0;
+    }
     auto iter = std::search(slice.data(), slice.data() + slice.size(),
 			    field.data(), field.data() + field.size());
     if (iter == slice.data() + slice.size()) { // not exist
@@ -168,10 +186,13 @@ int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
 	    *value = elem_value;
 	    return 1;
 	} else {
-	    decoder.skip(1);
+	    decoder.skip(1); // ':'
 	    if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 		return -1;
 	    }
+	}
+	if (!decoder.is_end()) {
+	    decoder.skip(1); // ';'
 	}
     }
     return 0;
@@ -190,11 +211,14 @@ int get_hash_values(const Bytes& slice, std::vector<StrPair>& values) {
 	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
-	decoder.skip(1);
+	decoder.skip(1); // ':'
 	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
 	    return -1;
 	}
 	values.push_back(std::make_pair(elem_field, elem_value));
+	if (!decoder.is_end()) {
+	    decoder.skip(1); // ';'
+	}
     }
     return 0;
 }
