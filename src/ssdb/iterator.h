@@ -66,8 +66,9 @@ class HIterator{
  private:
     Iterator *_it;
     bool _return_val;
-    std::vector<StrPair> _values;
+    bool _valid;
     int _index = -1;
+    std::vector<StrPair> _values;
 };
 
 

@@ -139,7 +139,7 @@ void HIterator::return_val(bool onoff){
 
 // TBD(kg): refactor HIterator since we've changed the layout of key, field, value
 bool HIterator::next() {
-    if (_index == -1) { // init first, mutex ?
+    if (_index == -1) { // init first, mutex TBD
 	_index = 0;
 	if (_it->next()) {
 	    Bytes ks = _it->key();
@@ -147,23 +147,25 @@ bool HIterator::next() {
 	    if (ks.data()[0] != DataType::HASH ||
 		decode_hash_key(ks, &key) == -1 ||
 		key != this->_key) {
-		return false;
+		_valid = false;
+		return _valid;
 	    }
 
 	    if (_return_val) {
 		Bytes vs = _it->val();
-		std::vector<StrPair> values;
-		if (get_hash_values(Bytes(key), values) == -1) {
-		    return false;
+		if (get_hash_values(Bytes(vs), _values) == -1) {
+		    _valid = false;
+		    return _valid;
 		}
 	    }
+	    _valid = true;
 	}
     }
-    if (_index >= _values.size()) {
+    if (_index >= _values.size() || !_valid) {
 	return false;
     } else {
-	this->_field = _values[_index].first;
-	this->_value = _values[_index].second;
+	_field = _values[_index].first;
+	_value = _values[_index].second;
 	_index++;
 	return true;
     }

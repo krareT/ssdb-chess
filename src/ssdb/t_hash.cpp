@@ -3,7 +3,12 @@
   Use of this source code is governed by a BSD-style license that can be
   found in the LICENSE file.
 */
+#include <iostream>
+
 #include "t_hash.h"
+
+using std::cout;
+using std::endl;
 
 static int hset_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, const Bytes &val, char log_type);
 static int hdel_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, char log_type);
@@ -239,11 +244,16 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
 	return -1;
     }
     // TBD(kg): should change to Merge()
-    std::string hkey = encode_hash_key(key);
     std::string old_value, new_value;
-    ssdb->hget(hkey, &old_value);
-    int ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
+    int ret = 0;
+    if ((ret = ssdb->hget(key, &old_value)) == -1) {
+	log_error("failed to hget on %s!", key.data());
+	return -1;
+    }
+    ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
     if (ret != -1) {
+	// use 'hkey' to log, not 'key'
+	std::string hkey = encode_hash_key(key);
 	ssdb->_binlogs->Put(hkey, slice(new_value));
 	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
     }
@@ -260,14 +270,35 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 	return -1;
     }
     // TBD(kg): should change to Merge()
-    std::string hkey = encode_hash_key(key);
     std::string old_value, new_value;
-    ssdb->hget(hkey, &old_value);
-    int ret = remove_hash_value(Bytes(old_value), field, &new_value);
+    int ret = 0;
+    if ((ret = ssdb->hget(key.data(), &old_value)) == -1) {
+	log_error("failed to hget on %s!", key.data());
+	return -1;
+    }
+     ret = remove_hash_value(Bytes(old_value), field, &new_value);
     if (ret == 1) { // remove as expected
+	std::string hkey = encode_hash_key(key);
 	ssdb->_binlogs->Put(hkey, slice(new_value));
 	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
     }
     return ret;
 }
 
+int TEST_insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
+			     std::string* ret) {
+    return insert_update_hash_value(slice, field, value, ret);
+}
+
+int TEST_remove_hash_value(const Bytes& slice, const Bytes& field,
+		      std::string* ret) {
+    return remove_hash_value(slice, field, ret);
+}
+
+int TEST_get_hash_values(const Bytes& slice, std::vector<StrPair>& values) {
+    return get_hash_values(slice, values);
+}
+
+int TEST_get_hash_value_count(const Bytes& slice) {
+    return get_hash_value_count(slice);
+}
