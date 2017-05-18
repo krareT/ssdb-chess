@@ -2,6 +2,8 @@
 #include "gtest/gtest.h"
 
 #include "../include.h"
+#include "const.h"
+#include "ssdb.h"
 #include "ssdb_impl.h"
 
 int Factorial(int n) {
@@ -12,7 +14,48 @@ int Factorial(int n) {
 using std::cout;
 using std::endl;
 
-TEST(InsertUpdateTest, BaseTest) {
+static const std::string kDBPath = "./testdb";
+
+// The fixture for testing class Foo.
+class THashTest : public ::testing::Test {
+protected:
+    virtual void SetUp() {
+	// Code here will be called immediately after the constructor (right
+	// before each test).
+	Options options;
+
+	// open DB
+	_ssdb = SSDB::open(Options(), kDBPath);
+	//rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &_db);
+	//assert(s.ok());
+    }
+
+    virtual void TearDown() {
+	// Code here will be called immediately after each test (right
+	// before the destructor).
+	delete _ssdb;
+
+	std::string cmd = "rm -rf " + kDBPath + "/*";
+	system (cmd.c_str());
+    }
+
+    // Objects declared here can be used by all tests in the test case for ....
+protected:
+    rocksdb::DB* _db;
+    SSDB *_ssdb;
+};
+
+// Tests that the Foo::Bar() method does Abc.
+TEST_F(THashTest, SetAndDel) {
+    std::string key1 = "key1";
+    int ret = _ssdb->hset(key1, "field1", "value1", BinlogCommand::HSET);
+    int cnt = _ssdb->hsize(key1);
+    ASSERT_EQ(1, cnt);
+}
+
+
+//TEST(InsertUpdateTest, BaseTest) {
+void foo1() {
     std::string prev_value, field, value;
     std::string output, expected;
     {
@@ -76,7 +119,8 @@ TEST(InsertUpdateTest, BaseTest) {
     }
 }
 
-TEST(RemoveTest, BaseTest) {
+//TEST(RemoveTest, BaseTest) {
+void foo2() {
     std::string prev_value, field, value;
     std::string output, expected;
     {

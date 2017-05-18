@@ -70,29 +70,25 @@ int SSDBImpl::hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *ne
 }
 
 // field count under the key
-int64_t SSDBImpl::hsize(const Bytes &name){
-    /*std::string size_key = encode_hsize_key(name);
+int64_t SSDBImpl::hsize(const Bytes &key) {
+    std::string dbkey = encode_hash_key(key);
     std::string val;
-    rocksdb::Status s;
-
-    s = ldb->Get(rocksdb::ReadOptions(), size_key, &val);
-    if(s.IsNotFound()){
+    rocksdb::Status s = ldb->Get(rocksdb::ReadOptions(), dbkey, &val);
+    if (s.IsNotFound()) {
 	return 0;
-    }else if(!s.ok()){
+    } else if(!s.ok()) {
 	return -1;
-    }else{
-	if(val.size() != sizeof(uint64_t)){
-	    return 0;
-	}
-	int64_t ret = *(int64_t *)val.data();
-	return ret < 0? 0 : ret;
+    } else {
+	return get_hash_value_count(val);
     }
-    */
-    return 0;
 }
 
-// TBD(kg): not supported yet
-int64_t SSDBImpl::hclear(const Bytes &name){
+// remove key
+int64_t SSDBImpl::hclear(const Bytes &key) {
+    std::string dbkey = encode_hash_key(key);
+    ldb->Delete(rocksdb::WriteOptions(), dbkey);
+    return 0;
+
     /*int64_t count = 0;
     while(1){
 	HIterator *it = this->hscan(name, "", "", 1000);
@@ -114,7 +110,6 @@ int64_t SSDBImpl::hclear(const Bytes &name){
     }
     return count;
     */
-    return 0;
 }
 
 int SSDBImpl::hget(const Bytes &key, std::string *val) {
@@ -144,7 +139,7 @@ int SSDBImpl::hget(const Bytes &key, const Bytes &field, std::string *val) {
     return get_hash_value(Bytes(*val), field, val);
 }
 
-// TBD(kg)...
+// TBD(kg): only support iter within one key right now
 HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &end,
 			   uint64_t limit) {
     /*std::string field_start, field_end;
@@ -195,30 +190,19 @@ static void get_hnames(Iterator *it, std::vector<std::string> *list) {
     }
 }
 
-// list of keys between [name_s, name_e)
-// TBD(kg): since we'll switch from { key+field: value }  to { key: field+value }, no
-// need to enumerate keys using hsize
+// list of keys between [key_s, key_e]
 int SSDBImpl::hlist(const Bytes &key_s, const Bytes &key_e, uint64_t limit,
 		    std::vector<std::string> *list) {
-    std::string start;
-    std::string end;
-
-    start = encode_hash_key(key_s);
-    if (!key_e.empty()) {
-	end = encode_hash_key(key_e);
-    }
-    /*start = encode_hsize_key(name_s);
-    if(!name_e.empty()){
-	end = encode_hsize_key(name_e);
-	}*/
+    std::string start = encode_hash_key(key_s);
+    std::string end = (!key_e.empty()) ? encode_hash_key(key_e) : "";
     
-	
     Iterator *it = this->iterator(start, end, limit);
     get_hnames(it, list);
     delete it;
     return 0;
 }
 
+// TBD(kg):...
 int SSDBImpl::hrlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
 		     std::vector<std::string> *list){
     /*std::string start;
@@ -240,16 +224,17 @@ int SSDBImpl::hrlist(const Bytes &name_s, const Bytes &name_e, uint64_t limit,
 }
 
 // returns the number of newly added items
-static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const Bytes &val, char log_type){
-    if(key.empty() || field.empty()){
+static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const Bytes &val,
+		    char log_type) {
+    if (key.empty() || field.empty()) {
 	log_error("empty key or field!");
 	return -1;
     }
-    if(key.size() > SSDB_KEY_LEN_MAX ){
+    if (key.size() > SSDB_KEY_LEN_MAX) {
 	log_error("key too long! %s", hexmem(key.data(), key.size()).c_str());
 	return -1;
     }
-    if(field.size() > SSDB_KEY_LEN_MAX){
+    if (field.size() > SSDB_KEY_LEN_MAX) {
 	log_error("field too long! %s", hexmem(field.data(), field.size()).c_str());
 	return -1;
     }
@@ -258,7 +243,7 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
     std::string old_value, new_value;
     ssdb->hget(hkey, &old_value);
     int ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
-    if (ret == 0) {
+    if (ret != -1) {
 	ssdb->_binlogs->Put(hkey, slice(new_value));
 	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
     }
@@ -266,7 +251,7 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
 }
 
 static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char log_type) {
-    if (key.size() > SSDB_KEY_LEN_MAX ){
+    if (key.size() > SSDB_KEY_LEN_MAX) {
 	log_error("name too long! %s", hexmem(key.data(), key.size()).c_str());
 	return -1;
     }

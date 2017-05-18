@@ -38,8 +38,8 @@ SSDBImpl::~SSDBImpl(){
 SSDB* SSDB::open(const Options &opt, const std::string &dir){
     SSDBImpl *ssdb = new SSDBImpl();
     ssdb->options.create_if_missing = true;
-    ssdb->options.IncreaseParallelism();
-    ssdb->options.OptimizeLevelStyleCompaction();
+    //ssdb->options.IncreaseParallelism();
+    //ssdb->options.OptimizeLevelStyleCompaction();
     /*
       ssdb->options.max_open_files = opt.max_open_files;
       ssdb->options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
@@ -110,6 +110,7 @@ Iterator* SSDBImpl::iterator(const std::string &start, const std::string &end, u
     iterate_options.fill_cache = false;
     it = ldb->NewIterator(iterate_options);
     it->Seek(start);
+    // TBD(kg): why call Next() ?
     if(it->Valid() && it->key() == start){
 	it->Next();
     }

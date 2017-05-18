@@ -223,4 +223,29 @@ int get_hash_values(const Bytes& slice, std::vector<StrPair>& values) {
     return 0;
 }
 
+static
+int get_hash_value_count(const Bytes& slice) {
+    int cnt = 0;
+    if (slice.empty()) {
+	return cnt;
+    }
+    Decoder decoder(slice.data(), slice.size());
+    while (!decoder.is_end()) {
+	std::string elem_field, elem_value;
+	int field_len, value_len;
+	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
+	    return -1;
+	}
+	decoder.skip(1); // ':'
+	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
+	    return -1;
+	}
+	if (!decoder.is_end()) {
+	    decoder.skip(1); // ';'
+	}
+	cnt++;
+    }
+    return cnt;
+}
+
 #endif
