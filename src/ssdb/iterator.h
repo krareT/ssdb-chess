@@ -7,6 +7,7 @@ found in the LICENSE file.
 #define SSDB_ITERATOR_H_
 
 #include <inttypes.h>
+#include <deque>
 #include <string>
 #include "../include.h"
 #include "../util/bytes.h"
@@ -68,7 +69,7 @@ class HIterator{
     bool _return_val;
     bool _valid;
     int _index = -1;
-    std::vector<StrPair> _values;
+    std::deque<StrPair> _values;
 };
 
 
