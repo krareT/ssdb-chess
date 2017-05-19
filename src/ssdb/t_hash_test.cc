@@ -46,7 +46,6 @@ protected:
     SSDB *_ssdb;
 };
 
-/*
 TEST_F(THashTest, SetAndCnt) {
 
     std::string key1 = "key1", field1 = "field1";
@@ -137,7 +136,7 @@ TEST_F(THashTest, Scan) {
     // empty
     iter = _ssdb->hscan("not exist", "", "", 100);
     ASSERT_FALSE(iter->next());
-    }*/
+}
 
 TEST(MergerTest, EmptyExistingTest) {
     std::string key, field, value;
@@ -277,7 +276,7 @@ TEST(MergerTest, NoneEmptyExistingTest) {
     std::string ep1 = encode_hash_value(field1, value1),
 	ep2 = encode_hash_value(field2, value2);
     std::string existing_value = ep1 + ";" + ep2;
-    rocksdb::Slice sexisting(existing_value);
+    rocksdb::Slice slice(existing_value);
 
     std::deque<std::string> operands;
     ChessMergeOperator chessMerger;
@@ -291,122 +290,64 @@ TEST(MergerTest, NoneEmptyExistingTest) {
 	operands.push_front(temp);
 
 	output = "";
-	chessMerger.FullMerge(key, &sexisting, operands,
+	chessMerger.FullMerge(key, &slice, operands,
 			     &output, nullptr);
 	EXPECT_EQ(output, expected);
     }
 
-    /*
     {
 	// one update
 	operands.clear();
-	field = value = output = expected = "";
-	field = "a3b4"; value = "112";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
 
-	field = "a3b4"; value = "-11159";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
+	value = "whatever";
+	std::string temp = encode_hash_value(field1, value);
+	operands.push_front(temp);
 
 	output = "";
-	chessMerger.FullMerge(key, nullptr, operands,
+	expected = temp + ";" + ep2;
+	chessMerger.FullMerge(key, &slice, operands,
 			     &output, nullptr);
 	EXPECT_EQ(output, expected);
     }
 
     {
-	// one insert, one delete
+	// one delete
 	operands.clear();
-	field = value = output = expected = "";
-	field = "a3b4"; value = "112";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
 
-	field = "a3b4"; value = "_deleted_";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
-
-	expected = "", output = "";
-	chessMerger.FullMerge(key, nullptr, operands,
-			     &output, nullptr);
-	EXPECT_EQ(output, expected);
-    }
-
-    {
-	// one delete, one insert
-	operands.clear();
-	field = value = output = expected = "";
-	field = "a3b4"; value = "_deleted_";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
-	
-	field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
+	value = "_deleted_";
+	std::string temp = encode_hash_value(field1, value);
+	operands.push_front(temp);
 
 	output = "";
-	chessMerger.FullMerge(key, nullptr, operands,
+	expected = ep2;
+	chessMerger.FullMerge(key, &slice, operands,
 			     &output, nullptr);
 	EXPECT_EQ(output, expected);
     }
+
 
     {
-	// two inserts, one update
+	// one insert, one update, one delete
 	operands.clear();
-	field = value = output = expected = "";
-	field = "a3b4"; value = "112";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
 
-	field = "a3b3"; value = "-11159";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
+	field = "cdeft"; value = "112";
+	std::string itemp = encode_hash_value(field, value);
+	operands.push_front(itemp);
 
-	field = "a3b4"; value = "11445";
-	std::string temp;
-	temp.push_back((char)field.length()); temp += field; temp.push_back(':');
-	temp.push_back((char)value.length()); temp += value; temp.push_back(';');
-	expected = temp + expected;
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
+	value = "_deleted_";
+	std::string dtemp = encode_hash_value(field2, value);
+	operands.push_front(dtemp);
+
+	value = "sowhat";
+	std::string utemp = encode_hash_value(field1, value);
+	operands.push_front(utemp);
 
 	output = "";
-	chessMerger.FullMerge(key, nullptr, operands,
+	expected = utemp + ";" + itemp;
+	chessMerger.FullMerge(key, &slice, operands,
 			     &output, nullptr);
 	EXPECT_EQ(output, expected);
     }
-
-    {
-	// two inserts, one delete
-	operands.clear();
-	field = value = output = expected = "";
-	field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
-
-	field = "a3b3"; value = "-11159";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
-
-	field = "a3b3"; value = "_deleted_";
-	TEST_insert_update_hash_value("", field, value, &output);
-	operands.push_front(output);
-
-	output = "";
-	chessMerger.FullMerge(key, nullptr, operands,
-			     &output, nullptr);
-	EXPECT_EQ(output, expected);
-    }
-    */
 }
 
 //TEST(ValueCntTest, BaseTest) {
