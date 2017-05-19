@@ -77,6 +77,7 @@ class SSDBImpl : public SSDB {
     /* hash */
 
     virtual int hset(const Bytes &name, const Bytes &key, const Bytes &val, char log_type=BinlogType::SYNC);
+    virtual int hset(const Bytes &key, const Bytes &val, char log_type=BinlogType::SYNC);
     virtual int hdel(const Bytes &name, const Bytes &key, char log_type=BinlogType::SYNC);
     // -1: error, 1: ok, 0: value is not an integer or out of range
     virtual int hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type=BinlogType::SYNC);

@@ -31,6 +31,7 @@ char Binlog::cmd() const{
     return buf[sizeof(uint64_t) + 1];
 }
 
+// key after strip seq, type, cmd
 const Bytes Binlog::key() const{
     return Bytes(buf.data() + HEADER_LEN, buf.size() - HEADER_LEN);
 }

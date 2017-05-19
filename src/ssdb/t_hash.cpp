@@ -10,8 +10,9 @@
 using std::cout;
 using std::endl;
 
-static int hset_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, const Bytes &val, char log_type);
-static int hdel_one(SSDBImpl *ssdb, const Bytes &name, const Bytes &key, char log_type);
+static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const Bytes &val, char log_type);
+static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &val, char log_type);
+static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char log_type);
 //static int incr_hsize(SSDBImpl *ssdb, const Bytes &name, int64_t incr);
 
 /**
@@ -21,6 +22,20 @@ int SSDBImpl::hset(const Bytes &name, const Bytes &key, const Bytes &val, char l
     Transaction trans(_binlogs);
 
     int ret = hset_one(this, name, key, val, log_type);
+    if(ret >= 0){
+	rocksdb::Status s = _binlogs->commit();
+	if(!s.ok()){
+	    return -1;
+	}
+    }
+    return ret;
+}
+
+// hreplace actually
+int SSDBImpl::hset(const Bytes &key, const Bytes &val, char log_type) {
+    Transaction trans(_binlogs);
+
+    int ret = hset_one(this, key, val, log_type);
     if(ret >= 0){
 	rocksdb::Status s = _binlogs->commit();
 	if(!s.ok()){
@@ -162,7 +177,9 @@ HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &en
     return new HIterator(this->iterator(key_start, "", limit), key);
 }
 
-// TBD(kg)...
+// TBD(kg): make sure enum all hset values is provided
+
+// TBD(kg): ...
 HIterator* SSDBImpl::hrscan(const Bytes &name, const Bytes &start, const Bytes &end, uint64_t limit){
     /*std::string key_start, key_end;
 
@@ -258,6 +275,24 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
 	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
     }
     return ret;
+}
+
+// TBD(kg): placeholder right now...
+static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &val, char log_type) {
+    if (key.empty()) {
+	log_error("empty key or field!");
+	return -1;
+    }
+    if (key.size() > SSDB_KEY_LEN_MAX) {
+	log_error("key too long! %s", hexmem(key.data(), key.size()).c_str());
+	return -1;
+    }
+    // TBD(kg): should change to Merge()
+    std::string hkey = encode_hash_key(key);
+    ssdb->_binlogs->Put(hkey, slice(val));
+    ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
+
+    return 0;
 }
 
 static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char log_type) {
