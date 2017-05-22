@@ -72,6 +72,27 @@ TEST_F(THashTest, SetAndCnt) {
     ASSERT_EQ(2, cnt);
 }
 
+TEST_F(THashTest, SetAndGet) {
+    std::string key1 = "key1", field1 = "field1", value1 = "value1";
+    int cnt = _ssdb->hsize(key1);
+    ASSERT_EQ(0, cnt);
+
+    int ret = _ssdb->hset(key1, field1, value1, BinlogCommand::HSET);
+ 
+    std::string result;
+    _ssdb->hget(key1, field1, &result);
+    EXPECT_EQ(value1, result);
+
+    std::string field2 = "field2", value2 = "value2";
+    ret = _ssdb->hset(key1, field2, value2, BinlogCommand::HSET);
+    cnt = _ssdb->hsize(key1);
+    ASSERT_EQ(2, cnt);
+
+    result = "";
+    _ssdb->hget(key1, field2, &result);
+    EXPECT_EQ(value2, result);
+}
+
 TEST_F(THashTest, DelAndCnt) {
 
     std::string key1 = "key1", field1 = "field1", field2 = "field2";
@@ -115,7 +136,6 @@ TEST_F(THashTest, ListKeys) {
     ASSERT_TRUE(names[1] == "key2");
 }
 
-/*
 TEST_F(THashTest, Scan) {
     std::string key1 = "key1",
 	field1 = "field1", field2 = "field2",
@@ -131,15 +151,15 @@ TEST_F(THashTest, Scan) {
     }
 
     ASSERT_EQ(2, arr.size());
-    ASSERT_TRUE(arr[0].first == field1);
-    ASSERT_TRUE(arr[0].second == value1);
-    ASSERT_TRUE(arr[1].first == field2);
-    ASSERT_TRUE(arr[1].second == value2);
+    ASSERT_TRUE(arr[0].first == field2);
+    ASSERT_TRUE(arr[0].second == value2);
+    ASSERT_TRUE(arr[1].first == field1);
+    ASSERT_TRUE(arr[1].second == value1);
 
     // empty
     iter = _ssdb->hscan("not exist", "", "", 100);
     ASSERT_FALSE(iter->next());
-}*/
+}
 
 TEST(MergerTest, EmptyExistingTest) {
     std::string key, field, value;
