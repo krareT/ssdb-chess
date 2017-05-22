@@ -9,6 +9,7 @@
 #include "rocksdb/cache.h"
 #include "rocksdb/filter_policy.h"
 
+#include "chess_merger.h"
 #include "iterator.h"
 #include "t_kv.h"
 #include "t_hash.h"
@@ -38,6 +39,7 @@ SSDBImpl::~SSDBImpl(){
 SSDB* SSDB::open(const Options &opt, const std::string &dir){
     SSDBImpl *ssdb = new SSDBImpl();
     ssdb->options.create_if_missing = true;
+    ssdb->options.merge_operator = std::make_shared<ChessMergeOperator>();
     //ssdb->options.IncreaseParallelism();
     //ssdb->options.OptimizeLevelStyleCompaction();
     /*

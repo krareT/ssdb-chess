@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <iostream>
 
 #include "rocksdb/merge_operator.h"
 #include "../include.h"
@@ -23,23 +24,23 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
     // Gives the client a way to express the read -> modify -> write semantics
     // key:         (IN) The key that's associated with this merge operation.
     // existing:    (IN) null indicates that the key does not exist before this op
-    // operand_list:(IN) the sequence of merge operations to apply, front() first.
+    // operand_list:(IN) the sequence of merge operations to apply, front() first (old first)
     // new_value:  (OUT) Client is responsible for filling the merge result here
     // logger:      (IN) Client could use this to log errors during merge.
     //
     // Return true on success. Return false failure / error / corruption.
     // TBD(kg): optimize string related ops...
-    virtual bool FullMerge(const rocksdb::Slice& key,
-			   const rocksdb::Slice* existing_value,
-			   const std::deque<std::string>& operand_list,
-			   std::string* new_value,
-			   Logger* logger) const {
+    virtual bool FullMergeV2(const MergeOperationInput& merge_in,
+			     MergeOperationOutput* merge_out) const {
+	// keep newest at front() in arr
 	std::deque<StrPair> arr;
 	static const int ExtraLen = 4;
 	int len = 0;
-	for (auto& item : operand_list) {
+	for (int i = merge_in.operand_list.size() - 1; i >= 0; i--) {
+	    const auto& item = merge_in.operand_list[i];
+	    Bytes slice(item.data(), item.size());
 	    std::string field, value;
-	    int ret = decode_hash_value(item, &field, &value);
+	    int ret = decode_hash_value(slice, &field, &value);
 	    if (ret == -1) {
 		return false;
 	    }
@@ -52,9 +53,9 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
 	    }
 	}
 	// filter existing value as well
-	if (existing_value && !existing_value->empty()) {
+	if (merge_in.existing_value && !merge_in.existing_value->empty()) {
 	    std::deque<StrPair> exists;
-	    Bytes slice(existing_value->data(), existing_value->size());
+	    Bytes slice(merge_in.existing_value->data(), merge_in.existing_value->size());
 	    if (get_hash_values(slice, exists) == -1) {
 		return false;
 	    }
@@ -69,22 +70,23 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
 	    }
 	}
 	//
-	new_value->reserve(len);
+	std::string& new_value = merge_out->new_value;
+	new_value.reserve(len);
 	len = 0;
 	for (auto& item : arr) {
 	    if (!isDeleted(item.first, item.second)) {
 		std::string& field = item.first, &value = item.second;
-		new_value->append(kFieldByteLen, (uint8_t)field.size());
-		new_value->append(field.data(), field.size());
-		new_value->append(1, ':');
-		new_value->append(kValueByteLen, (uint8_t)value.size());
-		new_value->append(value.data(), value.size());
-		new_value->append(1, ';');
+		new_value.append(kFieldByteLen, (uint8_t)field.size());
+		new_value.append(field.data(), field.size());
+		new_value.append(1, ':');
+		new_value.append(kValueByteLen, (uint8_t)value.size());
+		new_value.append(value.data(), value.size());
+		new_value.append(1, ';');
 		len += kFieldByteLen + field.size() + 1 + kValueByteLen + value.size() + 1;
 	    }
 	}
-	if (!new_value->empty()) {
-	    new_value->resize(len - 1);
+	if (!new_value.empty()) {
+	    new_value.resize(len - 1);
 	}
 	return true;
     }

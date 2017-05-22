@@ -261,7 +261,7 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
 	return -1;
     }
     // TBD(kg): should change to Merge()
-    std::string old_value, new_value;
+    /*std::string old_value, new_value;
     int ret = 0;
     if ((ret = ssdb->hget(key, &old_value)) == -1) {
 	log_error("failed to hget on %s!", key.data());
@@ -269,15 +269,16 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
     }
     ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
     if (ret != -1) {
-	// use 'hkey' to log, not 'key'
-	std::string hkey = encode_hash_key(key);
-	ssdb->_binlogs->Put(hkey, slice(new_value));
-	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
-    }
-    return ret;
+    */
+    // use 'hkey' to log, not 'key'
+    std::string hkey = encode_hash_key(key);
+    std::string new_value = encode_hash_value(field, val);
+    ssdb->_binlogs->Merge(hkey, slice(new_value));
+    ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
+
+    return 0;
 }
 
-// TBD(kg): placeholder right now...
 static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &val, char log_type) {
     if (key.empty()) {
 	log_error("empty key or field!");
@@ -287,9 +288,9 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &val, char log
 	log_error("key too long! %s", hexmem(key.data(), key.size()).c_str());
 	return -1;
     }
-    // TBD(kg): should change to Merge()
+
     std::string hkey = encode_hash_key(key);
-    ssdb->_binlogs->Put(hkey, slice(val));
+    ssdb->_binlogs->Merge(hkey, slice(val));
     ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
 
     return 0;
@@ -305,7 +306,7 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 	return -1;
     }
     // TBD(kg): should change to Merge()
-    std::string old_value, new_value;
+    /*std::string old_value, new_value;
     int ret = 0;
     if ((ret = ssdb->hget(key.data(), &old_value)) == -1) {
 	log_error("failed to hget on %s!", key.data());
@@ -313,11 +314,13 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
     }
      ret = remove_hash_value(Bytes(old_value), field, &new_value);
     if (ret == 1) { // remove as expected
-	std::string hkey = encode_hash_key(key);
-	ssdb->_binlogs->Put(hkey, slice(new_value));
-	ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
-    }
-    return ret;
+    */
+    std::string hkey = encode_hash_key(key);
+    std::string new_value = encode_hash_value(field, "_deleted_");
+    ssdb->_binlogs->Merge(hkey, slice(new_value));
+    ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
+
+    return 0;
 }
 
 

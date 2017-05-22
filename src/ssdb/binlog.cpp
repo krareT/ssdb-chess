@@ -264,6 +264,11 @@ void BinlogQueue::Put(const rocksdb::Slice& key, const rocksdb::Slice& value){
     _batch.Put(key, value);
 }
 
+// rocksdb merge
+void BinlogQueue::Merge(const rocksdb::Slice& key, const rocksdb::Slice& value) {
+    _batch.Merge(key, value);
+}
+
 // rocksdb delete
 void BinlogQueue::Delete(const rocksdb::Slice& key){
     _batch.Delete(key);

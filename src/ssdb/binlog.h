@@ -75,6 +75,8 @@ class BinlogQueue{
     rocksdb::Status commit();
     // rocksdb put
     void Put(const rocksdb::Slice& key, const rocksdb::Slice& value);
+    // rocksdb merge
+    void Merge(const rocksdb::Slice& key, const rocksdb::Slice& value);
     // rocksdb delete
     void Delete(const rocksdb::Slice& key);
     
