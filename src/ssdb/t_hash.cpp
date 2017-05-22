@@ -156,7 +156,7 @@ int SSDBImpl::hget(const Bytes &key, const Bytes &field, std::string *val) {
 	log_error("%s", s.ToString().c_str());
 	return -1;
     }
-    return get_hash_value(Bytes(*val), field, val);
+    return get_hash_value(Bytes(dbval), field, val);
 }
 
 // TBD(kg): only support iter within one key right now
@@ -501,14 +501,13 @@ int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
 	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
 	    return -1;
 	}
+	decoder.skip(1); // ':'
+	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
+	    return -1;
+	}
 	if (Bytes(field) == Bytes(elem_field)) {
 	    *value = elem_value;
 	    return 1;
-	} else {
-	    decoder.skip(1); // ':'
-	    if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
-		return -1;
-	    }
 	}
 	if (!decoder.is_end()) {
 	    decoder.skip(1); // ';'
