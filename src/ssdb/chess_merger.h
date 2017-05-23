@@ -21,14 +21,60 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
  public:
     virtual ~ChessMergeOperator() {}
 
+    /*
+    struct MergeOperationInput {
+	explicit MergeOperationInput(const Slice& _key,
+				     const Slice* _existing_value,
+				     const std::vector<Slice>& _operand_list,
+				     Logger* _logger)
+	    : key(_key),
+	    existing_value(_existing_value),
+	    operand_list(_operand_list),
+	    logger(_logger) {}
+
+	// The key associated with the merge operation.
+	const Slice& key;
+	// The existing value of the current key, nullptr means that the
+	// value dont exist.
+	const Slice* existing_value;
+	// A list of operands to apply.
+	const std::vector<Slice>& operand_list;
+	// Logger could be used by client to log any errors that happen during
+	// the merge operation.
+	Logger* logger;
+    };
+
+    struct MergeOperationOutput {
+	explicit MergeOperationOutput(std::string& _new_value,
+				      Slice& _existing_operand)
+	    : new_value(_new_value), existing_operand(_existing_operand) {}
+
+	// Client is responsible for filling the merge result here.
+	std::string& new_value;
+	// If the merge result is one of the existing operands (or existing_value),
+	// client can set this field to the operand (or existing_value) instead of
+	// using new_value.
+	Slice& existing_operand;
+    };
+    */
     // Gives the client a way to express the read -> modify -> write semantics
-    // key:         (IN) The key that's associated with this merge operation.
-    // existing:    (IN) null indicates that the key does not exist before this op
-    // operand_list:(IN) the sequence of merge operations to apply, front() first (old first)
-    // new_value:  (OUT) Client is responsible for filling the merge result here
-    // logger:      (IN) Client could use this to log errors during merge.
+    // key:      (IN)    The key that's associated with this merge operation.
+    //                   Client could multiplex the merge operator based on it
+    //                   if the key space is partitioned and different subspaces
+    //                   refer to different types of data which have different
+    //                   merge operation semantics
+    // existing: (IN)    null indicates that the key does not exist before this op
+    // operand_list:(IN) the sequence of merge operations to apply, front() first.
+    // new_value:(OUT)   Client is responsible for filling the merge result here.
+    // The string that new_value is pointing to will be empty.
+    // logger:   (IN)    Client could use this to log errors during merge.
     //
-    // Return true on success. Return false failure / error / corruption.
+    // Return true on success.
+    // All values passed in will be client-specific values. So if this method
+    // returns false, it is because client specified bad data or there was
+    // internal corruption. This will be treated as an error by the library.
+    //
+    // Also make use of the *logger for error messages.
     // TBD(kg): optimize string related ops...
     virtual bool FullMergeV2(const MergeOperationInput& merge_in,
 			     MergeOperationOutput* merge_out) const {
@@ -71,7 +117,7 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
 	}
 	//
 	std::string& new_value = merge_out->new_value;
-	new_value.reserve(len);
+	new_value.clear();  new_value.reserve(len);
 	len = 0;
 	for (auto& item : arr) {
 	    if (!isDeleted(item.first, item.second)) {
@@ -99,14 +145,14 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
     // when both the operands are themselves merge operation types.
     // Save the result in *new_value and return true. If it is impossible
     // or infeasible to combine the two operations, return false instead.
-    virtual bool PartialMerge(const rocksdb::Slice& key,
+    /*virtual bool PartialMerge(const rocksdb::Slice& key,
 			      const rocksdb::Slice& left_operand,
 			      const rocksdb::Slice& right_operand,
 			      std::string* new_value,
 			      Logger* logger) const {
 	//return true;
 	return false;
-    }
+	}*/
 
     // The name of the MergeOperator. Used to check for MergeOperator
     // mismatches (i.e., a DB created with one MergeOperator is
