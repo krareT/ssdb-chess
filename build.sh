@@ -4,7 +4,7 @@ JEMALLOC_PATH="$BASE_DIR/deps/jemalloc-4.1.0"
 LEVELDB_PATH="$BASE_DIR/deps/leveldb-1.18"
 ROCKSDB_PATH="$BASE_DIR/deps/rocksdb"
 SNAPPY_PATH="$BASE_DIR/deps/snappy-1.1.0"
-CXX_FLAGS=-std=c++11
+CXX_FLAGS="-std=c++11"
 # dependency check
 which autoconf > /dev/null 2>&1
 if [ "$?" -ne 0 ]; then
@@ -139,7 +139,8 @@ echo "CFLAGS += -I \"$ROCKSDB_PATH/include\"" >> build_config.mk
 
 echo "CLIBS=" >> build_config.mk
 #echo "CLIBS += \"$LEVELDB_PATH/libleveldb.a\"" >> build_config.mk
-echo "CLIBS += \"$ROCKSDB_PATH/librocksdb.dylib\"" >> build_config.mk
+#echo "CLIBS += \"$ROCKSDB_PATH/librocksdb.dylib\"" >> build_config.mk
+echo "CLIBS += \"$ROCKSDB_PATH/librocksdb.so.5.3.0"" >> build_config.mk
 echo "CLIBS += \"$SNAPPY_PATH/.libs/libsnappy.a\"" >> build_config.mk
 
 case "$TARGET_OS" in
@@ -161,8 +162,7 @@ fi
 g++ -x c++ - -o $TMPDIR/ssdb_build_test.$$ 2>/dev/null <<EOF
 	#include <unordered_map>
 	int main() {}
-EOF
+
 if [ "$?" = 0 ]; then
 	echo "CFLAGS += -DNEW_MAC" >> build_config.mk
 fi
-
