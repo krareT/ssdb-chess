@@ -55,15 +55,37 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
       ssdb->options.compression = rocksdb::kNoCompression;
       }
     */
-
+    // TBD(kg): options
+    static const std::string kOplogCF = "oplogCF";
+    std::vector<rocksdb::ColumnFamilyDescriptor> cfDescriptors = {
+	rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName, ssdb->options),
+	rocksdb::ColumnFamilyDescriptor(kOplogCF, rocksdb::ColumnFamilyOptions())
+    };
+    rocksdb::DB* db = nullptr;
     rocksdb::Status status;
-
-    status = rocksdb::DB::Open(ssdb->options, dir, &ssdb->ldb);
-    if(!status.ok()){
+    std::vector<rocksdb::ColumnFamilyHandle*> cfHandles;
+    int cnt = 0;
+    while (cnt < 2) {
+	status = rocksdb::DB::Open(ssdb->options, dir, cfDescriptors, &cfHandles, &db);
+	if (!status.ok()) {
+	    status = rocksdb::DB::OpenForReadOnly(ssdb->options, dir, &db);
+	    assert(status.ok());
+	    rocksdb::ColumnFamilyHandle* cf = nullptr;
+	    status = db->CreateColumnFamily(rocksdb::ColumnFamilyOptions(), kOplogCF, &cf);
+	    assert(status.ok());
+	    delete cf;
+	    delete db;
+	    cnt ++;
+	} else {
+	    break;
+	}
+    }
+    if (!status.ok()) {
 	log_error("open db failed: %s", status.ToString().c_str());
 	goto err;
     }
-    ssdb->_binlogs = new BinlogQueue(ssdb->ldb, opt.binlog, opt.binlog_capacity);
+    ssdb->ldb = db;
+    ssdb->_binlogs = new BinlogQueue(ssdb->ldb, cfHandles, opt.binlog, opt.binlog_capacity);
 
     return ssdb;
  err:

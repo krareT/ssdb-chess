@@ -157,8 +157,10 @@ static inline uint64_t decode_seq_key(const rocksdb::Slice &key){
     return seq;
 }
 
-BinlogQueue::BinlogQueue(rocksdb::DB *db, bool enabled, int capacity){
+BinlogQueue::BinlogQueue(rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> handles,
+			 bool enabled, int capacity) {
     this->db = db;
+    this->_cfHandles = handles;
     this->_min_seq = 0;
     this->_last_seq = 0;
     this->_tran_seq = 0;
@@ -248,7 +250,7 @@ void BinlogQueue::add_log(char type, char cmd, const rocksdb::Slice &key){
     }
     _tran_seq ++;
     Binlog log(_tran_seq, type, cmd, key);
-    _batch.Put(encode_seq_key(_tran_seq), log.repr());
+    _batch.Put(_cfHandles[kOplogCFHandle], encode_seq_key(_tran_seq), log.repr());
 }
 
 void BinlogQueue::add_log(char type, char cmd, const std::string &key){
@@ -281,7 +283,8 @@ int BinlogQueue::find_next(uint64_t next_seq, Binlog *log) const{
     uint64_t ret = 0;
     std::string key_str = encode_seq_key(next_seq);
     rocksdb::ReadOptions iterate_options;
-    rocksdb::Iterator *it = db->NewIterator(iterate_options);
+    rocksdb::Iterator *it = db->NewIterator(iterate_options,
+					    _cfHandles[kOplogCFHandle]);
     it->Seek(key_str);
     if(it->Valid()){
 	rocksdb::Slice key = it->key();
@@ -302,7 +305,8 @@ int BinlogQueue::find_last(Binlog *log) const{
     uint64_t ret = 0;
     std::string key_str = encode_seq_key(UINT64_MAX);
     rocksdb::ReadOptions iterate_options;
-    rocksdb::Iterator *it = db->NewIterator(iterate_options);
+    rocksdb::Iterator *it = db->NewIterator(iterate_options,
+					    _cfHandles[kOplogCFHandle]);
     it->Seek(key_str);
     if(!it->Valid()){
 	// Iterator::prev requires Valid, so we seek to last
@@ -328,7 +332,8 @@ int BinlogQueue::find_last(Binlog *log) const{
 
 int BinlogQueue::get(uint64_t seq, Binlog *log) const{
     std::string val;
-    rocksdb::Status s = db->Get(rocksdb::ReadOptions(), encode_seq_key(seq), &val);
+    rocksdb::Status s = db->Get(rocksdb::ReadOptions(), _cfHandles[kOplogCFHandle],
+				encode_seq_key(seq), &val);
     if(s.ok()){
 	if(log->load(val) != -1){
 	    return 1;
@@ -339,7 +344,8 @@ int BinlogQueue::get(uint64_t seq, Binlog *log) const{
 
 int BinlogQueue::update(uint64_t seq, char type, char cmd, const std::string &key){
     Binlog log(seq, type, cmd, key);
-    rocksdb::Status s = db->Put(rocksdb::WriteOptions(), encode_seq_key(seq), log.repr());
+    rocksdb::Status s = db->Put(rocksdb::WriteOptions(), _cfHandles[kOplogCFHandle],
+				encode_seq_key(seq), log.repr());
     if(s.ok()){
 	return 0;
     }
@@ -347,7 +353,8 @@ int BinlogQueue::update(uint64_t seq, char type, char cmd, const std::string &ke
 }
 
 int BinlogQueue::del(uint64_t seq){
-    rocksdb::Status s = db->Delete(rocksdb::WriteOptions(), encode_seq_key(seq));
+    rocksdb::Status s = db->Delete(rocksdb::WriteOptions(), _cfHandles[kOplogCFHandle],
+				   encode_seq_key(seq));
     if(!s.ok()){
 	return -1;
     }
@@ -363,7 +370,7 @@ int BinlogQueue::del_range(uint64_t start, uint64_t end){
     while(start <= end){
 	rocksdb::WriteBatch _batch;
 	for(int count = 0; start <= end && count < 1000; start++, count++){
-	    _batch.Delete(encode_seq_key(start));
+	    _batch.Delete(_cfHandles[kOplogCFHandle], encode_seq_key(start));
 	}
 		
 	Locking l(&this->mutex);
@@ -410,7 +417,8 @@ void* BinlogQueue::log_clean_thread_func(void *arg){
 void BinlogQueue::clean_obsolete_binlogs(){
     std::string key_str = encode_seq_key(this->_min_seq);
     rocksdb::ReadOptions iterate_options;
-    rocksdb::Iterator *it = db->NewIterator(iterate_options);
+    rocksdb::Iterator *it = db->NewIterator(iterate_options,
+					    _cfHandles[kOplogCFHandle]);
     it->Seek(key_str);
     if(it->Valid()){
 	it->Prev();

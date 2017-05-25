@@ -48,12 +48,16 @@ class Binlog{
 // circular queue
 class BinlogQueue{
  private:
-    // TBD(kg): separate binlog into oplogCF
     rocksdb::DB *db;
     uint64_t _min_seq;
     uint64_t _last_seq;
     uint64_t _tran_seq;
     int _capacity;
+    std::vector<rocksdb::ColumnFamilyHandle*> _cfHandles;
+    enum {
+	kDefaultCFHandle = 0,
+	kOplogCFHandle = 1
+    };
     rocksdb::WriteBatch _batch;
 
     volatile bool thread_quit;
@@ -68,7 +72,8 @@ class BinlogQueue{
  public:
     Mutex mutex;
 
-    BinlogQueue(rocksdb::DB *db, bool enabled=true, int capacity=20000000);
+    BinlogQueue(rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> handles,
+		bool enabled=true, int capacity=20000000);
     ~BinlogQueue();
     void begin();
     void rollback();

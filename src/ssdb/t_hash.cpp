@@ -324,11 +324,11 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 }
 
 
+// TBD(kg): get rid off 'length' byte
 std::string encode_hash_key(const Bytes &key) {
     std::string buf;
-    buf.reserve(1 + kKeyByteLen + key.size());
+    buf.reserve(1 + key.size());
     buf.append(1, DataType::HASH);
-    buf.append(kKeyByteLen, (uint8_t)key.size());
     buf.append(key.data(), key.size());
     return buf;
 }
@@ -338,7 +338,7 @@ int decode_hash_key(const Bytes &slice, std::string *key) {
     if (decoder.skip(1) == -1) {
 	return -1;
     }
-    if (decoder.read_8_data(key) == -1) {
+    if (decoder.read_data(key) == -1) {
 	return -1;
     }
     return 0;
