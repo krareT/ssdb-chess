@@ -161,7 +161,7 @@ TEST_F(THashTest, Scan) {
     ASSERT_FALSE(iter->next());
 }
 
-TEST(MergerTest, EmptyExistingTest) {
+TEST(FullMergerTest, EmptyExistingTest) {
     std::string key, field, value;
     std::string new_value, result, expected;
     
@@ -305,7 +305,7 @@ TEST(MergerTest, EmptyExistingTest) {
     }
 }
 
-TEST(MergerTest, NoneEmptyExistingTest) {
+TEST(FullMergerTest, NoneEmptyExistingTest) {
     std::string key, field, value;
     std::string new_value, result, expected;
 
@@ -404,6 +404,104 @@ TEST(MergerTest, NoneEmptyExistingTest) {
 	EXPECT_EQ(new_value, expected);
     }
 }
+
+TEST(PartialMergerTest, BaseTest) {
+    std::string key, field, value;
+    std::string new_value, result, expected;
+    
+    ChessMergeOperator chessMerger;
+    {
+	// two inserts
+	field = "a3b4"; value = "112";
+	std::string ep1 = encode_hash_value(field, value);
+
+	field = "a3b3"; value = "-11159";
+	std::string ep2 = encode_hash_value(field, value);
+
+	new_value = "";
+	expected = ep2 + ";" + ep1;
+	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+    {
+	// one insert, one update
+	field = "a3b4"; value = "112";
+	std::string ep1 = encode_hash_value(field, value);
+
+	field = "a3b4"; value = "-11159";
+	std::string ep2 = encode_hash_value(field, value);
+
+	new_value = "";
+	expected = ep2;
+	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+    {
+	// one insert, one delete
+	field = "a3b4"; value = "112";
+	std::string ep1 = encode_hash_value(field, value);
+
+	field = "a3b4"; value = "_deleted_";
+	std::string ep2 = encode_hash_value(field, value);
+
+	expected = ""; new_value = "";
+	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+    {
+	// one delete, one insert
+	field = value = expected = "";
+	field = "a3b4"; value = "_deleted_";
+	std::string ep1 = encode_hash_value(field, value);
+	
+	field = "a3b4"; value = "112";
+	std::string ep2 = encode_hash_value(field, value);
+
+	new_value = "";
+	expected = ep2;
+	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+    {
+	// two inserts, one update
+	field = "a3b4"; value = "112";
+	std::string ep1 = encode_hash_value(field, value);
+
+	field = "a3b3"; value = "-11159";
+	std::string ep2 = encode_hash_value(field, value);
+
+	field = "a3b4"; value = "11445";
+	std::string ep3 = encode_hash_value(field, value);
+
+	new_value = "";
+	expected = ep3 + ";" + ep2;
+	chessMerger.PartialMerge(key, ep1, ep3 + ";" + ep2, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+    {
+	// two inserts, one delete
+	field = "a3b4"; value = "112";
+	std::string ep1 = encode_hash_value(field, value);
+
+	field = "a3b3"; value = "-11159";
+	std::string ep2 = encode_hash_value(field, value);
+
+	field = "a3b3"; value = "_deleted_";
+	std::string ep3 = encode_hash_value(field, value);
+
+	new_value = "";
+	expected = ep1;
+	chessMerger.PartialMerge(key, ep1 + ";" + ep2, ep3, &new_value, nullptr);
+
+	EXPECT_EQ(new_value, expected);
+    }
+}
+
 
 //TEST(ValueCntTest, BaseTest) {
 void foo0() {

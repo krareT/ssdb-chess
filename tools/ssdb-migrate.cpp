@@ -257,7 +257,6 @@ int main(int argc, char **argv){
     }
   }
   printf("total dumped %" PRId64 " entry(s)\n", dump_count);
-
   /*
     {
     std::string val;
@@ -275,8 +274,6 @@ int main(int argc, char **argv){
     printf("%s\n", val.c_str());
     }
     }
-    
-    printf("backup has been made to folder: %s\n", config.output_folder.c_str());
   */
   delete link;
   delete dst;
