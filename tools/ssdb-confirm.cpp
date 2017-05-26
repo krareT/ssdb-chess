@@ -1,6 +1,10 @@
 // this is only a demo, DO NOT use
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
+#include <chrono>
+#include <fstream>
+#include <random>       // std::default_random_engine
 #include <map>
 #include <string>
 #include <vector>
@@ -13,6 +17,7 @@
 
 #define BATCH_SIZE 100
 
+std::vector<std::string> chess_ds;
 ssdb::Client *src = NULL;
 ssdb::Client *dst = NULL;
 
@@ -91,23 +96,14 @@ ssdb::Client* init_client(const std::string &ip, int port){
   return client;
 }
 
-int hashset(ssdb::Client *client, const std::string& key,
-	    const std::string& field, const std::string& value) {
-  ssdb::Status s = client->hset(key, field, value);
+int hgetall(ssdb::Client *client, const std::string& key,
+	    std::vector<std::string>* val) {
+  ssdb::Status s = client->hgetall(key, val);
   if(!s.ok()){
-    log_error("dst hset error! %s", s.code().c_str());
+    log_error("dst hgetall error! %s", s.code().c_str());
     return -1;
   }
   return 0;
-}
-
-void check_version(ssdb::Client *client){
-  const std::vector<std::string>* resp;
-  resp = client->request("version");
-  if(!resp || resp->size() < 2 || resp->at(0) != "ok"){
-    fprintf(stderr, "ERROR: ssdb-server 1.9.0 or higher is required!\n");
-    exit(1);
-  }
 }
 
 bool to_binary(const char* src, int len, std::string& dst) {
@@ -142,6 +138,42 @@ bool to_binary(const char* src, int len, std::string& dst) {
   return true;
 }
 
+void init_data(int num) {
+  std::string path = "./key_sample.txt";
+  std::ifstream src_file(path.c_str());
+  std::string line;
+  int cnt = 0;
+  while (std::getline(src_file, line)) {
+    int pos = 0;
+    if ((pos = line.find("key: ")) == std::string::npos) {
+      continue;
+    }
+    std::string src = line.substr(5);
+    std::string dst;
+    if (to_binary(src.data(), src.size(), dst)) {
+      chess_ds.emplace_back(dst.data(), dst.size());
+    } else {
+      printf("Fail to convert %s\n", src.c_str());
+      //exit(1);
+    }
+    if (num != -1 && ++cnt >= num) {
+      break;
+    }
+  }
+  // obtain a time-based seed:
+  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  std::shuffle(chess_ds.begin(), chess_ds.end(), std::default_random_engine(seed));
+  printf("item count is %lu\n", chess_ds.size());
+}
+
+void print_val(const std::string& tag, std::vector<std::string>& arr) {
+    printf("\t%s\n", tag.c_str());
+    for (auto& str : arr) {
+	printf("\t%s", str.c_str());
+    }
+    printf("\n");
+}
+
 int main(int argc, char **argv){
   welcome();
   set_log_level(Logger::LEVEL_MIN);
@@ -149,116 +181,49 @@ int main(int argc, char **argv){
   AppArgs args;
   parse_args(&args, argc, argv);
 
-  // connect to src server
-  Link *link = Link::connect(args.src_ip.c_str(), args.src_port);
-  if (link == NULL) {
-    fprintf(stderr, "ERROR: error connecting to src server: %s:%d!\n",
-	    args.src_ip.c_str(), args.src_port);
-    exit(1);
-  }
-  // connect to dst server
+  src = init_client(args.src_ip, args.src_port);
   dst = init_client(args.dst_ip, args.dst_port);
-  if(dst == NULL){
-    log_error("fail to connect to server!");
-    return 0;
-  }
-  printf("after connect\n");
-  // start transfer
-  link->send("dump", "A", "", "-1");
-  link->flush();
-    
-  int64_t dump_count = 0;
-  while (1) {
-    const std::vector<Bytes> *req = link->recv();
-    if (req == NULL) {
-      fprintf(stderr, "recv error\n");
-      fprintf(stderr, "ERROR: failed to dump data!\n");
-      exit(1);
-    } else if(req->empty()) {
-      int len = link->read();
-      if (len <= 0) {
-	fprintf(stderr, "read error: %s\n", strerror(errno));
-	fprintf(stderr, "ERROR: failed to dump data!\n");
-	exit(1);
+  init_data(args.limit);
+
+  int diff_cnt = 0;
+  for (auto& key : chess_ds) {
+      std::string bin_key;
+      if (!to_binary(key.data(), key.size(), bin_key)) {
+	  printf("Fail to convert back to binary %s\n", key.c_str());
       }
-    } else {
-      Bytes cmd = req->at(0);
-      if (cmd == "begin") {
-	printf("recv begin...\n");
-      } else if(cmd == "end") {
-	printf("received %" PRId64 " entry(s)\n", dump_count);
-	printf("recv end\n\n");
-	break;
-      } else if(cmd == "set") {
-	if (req->size() != 3) {
-	  fprintf(stderr, "invalid set params!\n");
-	  fprintf(stderr, "ERROR: failed to dump data!\n");
-	  exit(1);
-	}
-	Bytes key = req->at(1);
-	Bytes val = req->at(2);
-	if (key.size() == 0 || key.data()[0] == DataType::SYNCLOG) {
+      std::vector<std::string> src_arr, dst_arr;
+      if (hgetall(src, bin_key, &src_arr) == -1 ||
+	  hgetall(dst, bin_key, &dst_arr) == -1) {
+	  printf("Fail to get %s\n", key.c_str());
 	  continue;
-	}
-
-	if (args.src_port == args.dst_port) {
-	    //if (dump_count > 0 && dump_count % 100 == 0) { // sample keys
-	    //printf("key: %s\n", str_escape(key.data(), key.size()).c_str());
-	    //}
-	    printf("key: %s\nval: %s\n", str_escape(key.data(), key.size()).c_str(),
-	    	   str_escape(val.data(), val.size()).c_str());
-	} else {
-	  if (key.data()[0] != 'h') { // only support hset right now
-	    continue;
-	  }
-	  Bytes hkey(key.data() + 2, key.size() - 2); // skip 'h' & 'key length'
-	  int index = -1;
-	  for (int i = hkey.size() - 1; i >= 0; i--) {
-	    if (hkey.data()[i] == '=') {
-	      index = i;
-	      break;
-	    }
-	  }
-	  if (index < 0) {
-	    fprintf(stderr, "invalid key\n");
-	    continue;
-	  }
-
-	  std::string k(hkey.data(), index);
-	  std::string f(hkey.data() + index + 1, hkey.size() - index - 1);
-	  std::string v(val.data(), val.size());
-
-	  if (dump_count > 0 && dump_count % 100 == 0) { // sample keys
-	      printf("key: %s\n", str_escape(k.data(), k.size()).c_str());
-	  }	  
-	  /*printf("src %s %s %s\n", str_escape(k.data(), k.size()).c_str(),
-	  	 str_escape(f.data(), f.size()).c_str(),
-	  	 str_escape(v.data(), v.size()).c_str());*/
-
-	  int ret = hashset(dst, k, f, v);
-	  if (ret != 0) {
-	    fprintf(stderr, "hset  error!\n");
-	    fprintf(stderr, "ERROR: failed to dump data!\n");
-	    exit(1);
-	  }
-	}
-
-	dump_count ++;
-	if (args.limit != -1 && dump_count >= args.limit) {
-	  break;
-	}
-	//if ((int)log10(dump_count - 1) != (int)log10(dump_count) || (dump_count > 0 && dump_count % 100000 == 0)) {
-	if (dump_count > 0 && dump_count % 100000 == 0) {
-	  printf("received %" PRId64 " entry(s)\n", dump_count);
-	}
-      } else {
-	fprintf(stderr, "error: unknown command %s\n", std::string(cmd.data(), cmd.size()).c_str());
-	fprintf(stderr, "ERROR: failed to dump data!\n");
-	exit(1);
       }
-    }
+      if (src_arr.size() != dst_arr.size()) {
+	  printf("Diff Value %s\n", str_escape(key.data(), key.size()).c_str());
+	  print_val("src: ", src_arr);
+	  print_val("dst: ", dst_arr);
+	  continue;
+      }
+      std::map<std::string, std::string> src_dict, dst_dict;
+      for (int i = 0; i + 1 < src_arr.size(); i += 2) {
+	  src_dict[src_arr[i]] = src_arr[i + 1];
+	  dst_dict[dst_arr[i]] = dst_arr[i + 1];
+      }
+      bool diff = false;
+      for (int i = 0; i + 1 < src_arr.size(); i += 2) {
+	  std::string& str = src_arr[i];
+	  if (src_dict[str] != dst_dict[str]) {
+	      diff = true;
+	      break;
+	  }
+      }
+      if (diff) {
+	  printf("Diff Value %s\n", str_escape(key.data(), key.size()).c_str());
+	  print_val("src: ", src_arr);
+	  print_val("dst: ", dst_arr);
+	  diff_cnt ++;
+      } 
   }
-  printf("total dumped %" PRId64 " entry(s)\n", dump_count);
+  printf("diff_cnt is %d\n", diff_cnt);
   /*
     {
     std::string val;
@@ -276,8 +241,10 @@ int main(int argc, char **argv){
     printf("%s\n", val.c_str());
     }
     }
+    
+    printf("backup has been made to folder: %s\n", config.output_folder.c_str());
   */
-  delete link;
+  delete src;
   delete dst;
   return 0;
 }

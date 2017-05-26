@@ -263,17 +263,17 @@ void BinlogQueue::add_log(char type, char cmd, const std::string &key){
 
 // rocksdb put
 void BinlogQueue::Put(const rocksdb::Slice& key, const rocksdb::Slice& value){
-    _batch.Put(key, value);
+    _batch.Put(_cfHandles[kDefaultCFHandle], key, value);
 }
 
 // rocksdb merge
 void BinlogQueue::Merge(const rocksdb::Slice& key, const rocksdb::Slice& value) {
-    _batch.Merge(key, value);
+    _batch.Merge(_cfHandles[kDefaultCFHandle], key, value);
 }
 
 // rocksdb delete
 void BinlogQueue::Delete(const rocksdb::Slice& key){
-    _batch.Delete(key);
+    _batch.Delete(_cfHandles[kDefaultCFHandle], key);
 }
 	
 int BinlogQueue::find_next(uint64_t next_seq, Binlog *log) const{
