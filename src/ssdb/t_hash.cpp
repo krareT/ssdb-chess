@@ -260,16 +260,6 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
 	log_error("field too long! %s", hexmem(field.data(), field.size()).c_str());
 	return -1;
     }
-    // TBD(kg): should change to Merge()
-    /*std::string old_value, new_value;
-    int ret = 0;
-    if ((ret = ssdb->hget(key, &old_value)) == -1) {
-	log_error("failed to hget on %s!", key.data());
-	return -1;
-    }
-    ret = insert_update_hash_value(Bytes(old_value), field, val, &new_value);
-    if (ret != -1) {
-    */
     // use 'hkey' to log, not 'key'
     std::string hkey = encode_hash_key(key);
     std::string new_value = encode_hash_value(field, val);
@@ -305,16 +295,6 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 	log_error("key too long! %s", hexmem(field.data(), field.size()).c_str());
 	return -1;
     }
-    // TBD(kg): should change to Merge()
-    /*std::string old_value, new_value;
-    int ret = 0;
-    if ((ret = ssdb->hget(key.data(), &old_value)) == -1) {
-	log_error("failed to hget on %s!", key.data());
-	return -1;
-    }
-     ret = remove_hash_value(Bytes(old_value), field, &new_value);
-    if (ret == 1) { // remove as expected
-    */
     std::string hkey = encode_hash_key(key);
     std::string new_value = encode_hash_value(field, "_deleted_");
     ssdb->_binlogs->Merge(hkey, slice(new_value));
@@ -323,8 +303,6 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
     return 0;
 }
 
-
-// TBD(kg): get rid off 'length' byte
 std::string encode_hash_key(const Bytes &key) {
     std::string buf;
     buf.reserve(1 + key.size());

@@ -36,14 +36,14 @@ int get_hash_values(const Bytes& slice, std::deque<StrPair>& values);
 
 int get_hash_value_count(const Bytes& slice);
 
-int TEST_insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
-					 std::string* ret);
+//int TEST_insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
+//				  std::string* ret);
 
-int TEST_remove_hash_value(const Bytes& slice, const Bytes& field,
-			   std::string* ret);
+//int TEST_remove_hash_value(const Bytes& slice, const Bytes& field,
+//			   std::string* ret);
 
-int TEST_get_hash_values(const Bytes& slice, std::vector<StrPair>& values);
+//int TEST_get_hash_values(const Bytes& slice, std::vector<StrPair>& values);
 
-int TEST_get_hash_value_count(const Bytes& slice);
+//int TEST_get_hash_value_count(const Bytes& slice);
 
 #endif

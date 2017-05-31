@@ -33,7 +33,7 @@ case "$TARGET_OS" in
 		#PLATFORM_CFLAGS=""
         ;;
     Linux)
-        PLATFORM_CLIBS="-pthread -lrt"
+        PLATFORM_CLIBS="-lpthread -lrt"
         ;;
     OS_ANDROID_CROSSCOMPILE)
         PLATFORM_CLIBS="-pthread"
@@ -140,7 +140,7 @@ echo "CFLAGS += -I \"$ROCKSDB_PATH/include\"" >> build_config.mk
 echo "CLIBS=" >> build_config.mk
 #echo "CLIBS += \"$LEVELDB_PATH/libleveldb.a\"" >> build_config.mk
 #echo "CLIBS += \"$ROCKSDB_PATH/librocksdb.dylib\"" >> build_config.mk
-echo "CLIBS += -L \"$ROCKSDB_PATH/\"" >> build_config.mk
+echo "CLIBS += -L \"$ROCKSDB_PATH\"" >> build_config.mk
 echo "CLIBS += \"$SNAPPY_PATH/.libs/libsnappy.a\"" >> build_config.mk
 
 case "$TARGET_OS" in

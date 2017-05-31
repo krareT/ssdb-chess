@@ -4,6 +4,10 @@ OBJS = ssdb_impl.o iterator.o options.o \
 	t_kv.o t_hash.o t_zset.o t_queue.o binlog.o ttl.o
 LIBS = ../util/libutil.a
 
+#echo ${OBJS}
+#echo $CFLAGS
+#echo $LIBS
+#echo $CLIBS
 
 all: ssdb.h ${OBJS}
 	ar -cru ./libssdb.a ${OBJS}
@@ -28,7 +32,8 @@ ttl.o: ssdb.h ttl.h ttl.cpp
 	${CXX} ${CFLAGS} -c ttl.cpp
 
 test:
-	${CXX} -o test.out test.cpp ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS}
+	${CXX} -o t_hash_test t_hash_test.cc ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS} -lrocksdb -lgtest
+#	${CXX} -o test.out test.cpp ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS}
 
 clean:
 	rm -f ${EXES} *.o *.exe *.a
