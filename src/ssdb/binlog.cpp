@@ -160,6 +160,7 @@ static inline uint64_t decode_seq_key(const rocksdb::Slice &key){
 BinlogQueue::BinlogQueue(rocksdb::DB *db, std::vector<rocksdb::ColumnFamilyHandle*> handles,
 			 bool enabled, int capacity) {
     this->db = db;
+    //this->_write_opts.disableWAL = true;
     this->_cfHandles = handles;
     this->_min_seq = 0;
     this->_last_seq = 0;
@@ -235,8 +236,7 @@ void BinlogQueue::rollback(){
 }
 
 rocksdb::Status BinlogQueue::commit(){
-    rocksdb::WriteOptions write_opts;
-    rocksdb::Status s = db->Write(write_opts, &_batch);
+    rocksdb::Status s = db->Write(_write_opts, &_batch);
     if(s.ok()){
 	_last_seq = _tran_seq;
 	_tran_seq = 0;
@@ -344,7 +344,7 @@ int BinlogQueue::get(uint64_t seq, Binlog *log) const{
 
 int BinlogQueue::update(uint64_t seq, char type, char cmd, const std::string &key){
     Binlog log(seq, type, cmd, key);
-    rocksdb::Status s = db->Put(rocksdb::WriteOptions(), _cfHandles[kOplogCFHandle],
+    rocksdb::Status s = db->Put(_write_opts, _cfHandles[kOplogCFHandle],
 				encode_seq_key(seq), log.repr());
     if(s.ok()){
 	return 0;
@@ -353,7 +353,7 @@ int BinlogQueue::update(uint64_t seq, char type, char cmd, const std::string &ke
 }
 
 int BinlogQueue::del(uint64_t seq){
-    rocksdb::Status s = db->Delete(rocksdb::WriteOptions(), _cfHandles[kOplogCFHandle],
+    rocksdb::Status s = db->Delete(_write_opts, _cfHandles[kOplogCFHandle],
 				   encode_seq_key(seq));
     if(!s.ok()){
 	return -1;
@@ -368,16 +368,16 @@ void BinlogQueue::flush(){
 // TBD(kg): Del may use DeleteFilesInRange() ?
 int BinlogQueue::del_range(uint64_t start, uint64_t end){
     while(start <= end){
-	rocksdb::WriteBatch _batch;
+	rocksdb::WriteBatch batch;
 	for(int count = 0; start <= end && count < 1000; start++, count++){
-	    _batch.Delete(_cfHandles[kOplogCFHandle], encode_seq_key(start));
+	    batch.Delete(_cfHandles[kOplogCFHandle], encode_seq_key(start));
 	}
 		
 	Locking l(&this->mutex);
 	if(!this->db){
 	    return -1;
 	}
-	rocksdb::Status s = this->db->Write(rocksdb::WriteOptions(), &_batch);
+	rocksdb::Status s = this->db->Write(_write_opts, &batch);
 	if(!s.ok()){
 	    return -1;
 	}

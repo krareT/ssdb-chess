@@ -442,7 +442,6 @@ int BackendSync::Client::sync(BinlogQueue *logs){
     case BinlogCommand::QPOP_BACK:
     case BinlogCommand::QPOP_FRONT:
 	log_trace("fd: %d, %s", link->fd(), log.dumps().c_str());
-	// TBD(kg): only key is not enough for HDEL, need to follow HSET format
 	link->send(log.repr());
 	break;
     }

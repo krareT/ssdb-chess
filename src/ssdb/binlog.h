@@ -49,6 +49,7 @@ class Binlog{
 class BinlogQueue{
  private:
     rocksdb::DB *db;
+    rocksdb::WriteOptions _write_opts;
     uint64_t _min_seq;
     uint64_t _last_seq;
     uint64_t _tran_seq;
@@ -69,6 +70,7 @@ class BinlogQueue{
     void clean_obsolete_binlogs();
     void merge();
     bool enabled;
+
  public:
     Mutex mutex;
 

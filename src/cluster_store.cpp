@@ -49,8 +49,6 @@ int ClusterStore::load_kv_node(int id, Node *node){
 
 int ClusterStore::del_kv_node(int id){
     std::string key = str(id);
-    // TBD(kg): shoule be replaced with Merge as well ?
-    // also all hset/hdel in this class
     int ret = db->hdel(kv_node_list_key, key);
     if(ret == -1){
 	log_error("cluster store error!");

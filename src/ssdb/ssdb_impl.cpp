@@ -40,8 +40,12 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     SSDBImpl *ssdb = new SSDBImpl();
     ssdb->options.create_if_missing = true;
     ssdb->options.merge_operator = std::make_shared<ChessMergeOperator>();
-    //ssdb->options.IncreaseParallelism();
-    //ssdb->options.OptimizeLevelStyleCompaction();
+    ssdb->options.IncreaseParallelism();
+    ssdb->options.OptimizeLevelStyleCompaction();
+    ssdb->options.max_background_compactions = 8;
+    ssdb->options.max_background_flushes = 8;
+    ssdb->options.env->SetBackgroundThreads(8, rocksdb::Env::LOW);
+    ssdb->options.env->SetBackgroundThreads(8, rocksdb::Env::HIGH);
     /*
       ssdb->options.max_open_files = opt.max_open_files;
       ssdb->options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
@@ -57,21 +61,23 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     */
     // TBD(kg): options
     static const std::string kOplogCF = "oplogCF";
+    rocksdb::ColumnFamilyOptions oplogOption;
+    oplogOption.write_buffer_size = opt.write_buffer_size * 1024 * 1024;
+    oplogOption.target_file_size_base = oplogOption.write_buffer_size;
     std::vector<rocksdb::ColumnFamilyDescriptor> cfDescriptors = {
 	rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName, ssdb->options),
-	rocksdb::ColumnFamilyDescriptor(kOplogCF, rocksdb::ColumnFamilyOptions())
+	rocksdb::ColumnFamilyDescriptor(kOplogCF, oplogOption)
     };
     rocksdb::DB* db = nullptr;
     rocksdb::Status status;
-    std::vector<rocksdb::ColumnFamilyHandle*> cfHandles;
     int cnt = 0;
     while (cnt < 2) {
-	status = rocksdb::DB::Open(ssdb->options, dir, cfDescriptors, &cfHandles, &db);
+	status = rocksdb::DB::Open(ssdb->options, dir, cfDescriptors, &ssdb->_cfHandles, &db);
 	if (!status.ok()) {
 	    status = rocksdb::DB::OpenForReadOnly(ssdb->options, dir, &db);
 	    assert(status.ok());
 	    rocksdb::ColumnFamilyHandle* cf = nullptr;
-	    status = db->CreateColumnFamily(rocksdb::ColumnFamilyOptions(), kOplogCF, &cf);
+	    status = db->CreateColumnFamily(oplogOption, kOplogCF, &cf);
 	    assert(status.ok());
 	    delete cf;
 	    delete db;
@@ -85,7 +91,7 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
 	goto err;
     }
     ssdb->ldb = db;
-    ssdb->_binlogs = new BinlogQueue(ssdb->ldb, cfHandles, opt.binlog, opt.binlog_capacity);
+    ssdb->_binlogs = new BinlogQueue(ssdb->ldb, ssdb->_cfHandles, opt.binlog, opt.binlog_capacity);
 
     return ssdb;
  err:
@@ -233,7 +239,10 @@ std::vector<std::string> SSDBImpl::info(){
 }
 
 void SSDBImpl::compact(){
-    ldb->CompactRange(NULL, NULL);
+    //ldb->CompactRange(NULL, NULL);
+    for (int i = 0; i < _cfHandles.size(); i++) {
+	ldb->Flush(rocksdb::FlushOptions(), _cfHandles[i]);
+    }
 }
 
 int SSDBImpl::key_range(std::vector<std::string> *keys){

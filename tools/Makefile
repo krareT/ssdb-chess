@@ -9,7 +9,7 @@ export $CFLAGS
 all: ssdb-bench.o ssdb-dump.o ssdb-migrate.o ssdb-bench-update.o ssdb-bench-update2.o ssdb-confirm.o
 	${CXX} -o ssdb-bench ssdb-bench.o ${OBJS} ${UTIL_OBJS} ${CLIBS}
 	${CXX} -o ssdb-dump ssdb-dump.o ${OBJS} ${UTIL_OBJS} ${CLIBS} -lrocksdb
-	${CXX} -g -o ssdb-migrate ssdb-migrate.o ../api/cpp/libssdb-client.a ../src/util/libutil.a
+	${CXX} -g -o ssdb-migrate ssdb-migrate.o ../api/cpp/libssdb-client.a ../src/util/libutil.a -lpthread
 	${CXX} -g -o ssdb-bench-update ssdb-bench-update.o ${OBJS} ${UTIL_OBJS} ${CLIBS}
 	${CXX} -g -o ssdb-bench-update2 ssdb-bench-update2.o ${OBJS} ${UTIL_OBJS} ${CLIBS} -lpthread ../api/cpp/libssdb-client.a ../src/util/libutil.a
 	${CXX} -g -o ssdb-confirm ssdb-confirm.o ../api/cpp/libssdb-client.a ../src/util/libutil.a
@@ -20,7 +20,7 @@ ssdb-migrate.o: ssdb-migrate.cpp
 	${CXX} -g ${CFLAGS} -I../api/cpp -c ssdb-migrate.cpp
 ssdb-bench.o: ssdb-bench.cpp
 	${CXX} ${CFLAGS} -c ssdb-bench.cpp
-ssdb-dump.o: ssdb-dump.cpp
+ssdb-dump.o: ssdb-dump.cpp block-queue.h
 	${CXX} -g ${CFLAGS} -c ssdb-dump.cpp
 ssdb-bench-update.o: ssdb-bench-update.cpp
 	${CXX} -g ${CFLAGS} -c ssdb-bench-update.cpp

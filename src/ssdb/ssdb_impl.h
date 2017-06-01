@@ -6,6 +6,7 @@
 #ifndef SSDB_IMPL_H_
 #define SSDB_IMPL_H_
 
+#include <mutex>
 #include "rocksdb/db.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
@@ -30,7 +31,9 @@ class SSDBImpl : public SSDB {
     friend class SSDB;
     rocksdb::DB* ldb;
     rocksdb::Options options;
-	
+    std::vector<rocksdb::ColumnFamilyHandle*> _cfHandles;
+    std::mutex _mutex;
+    
     SSDBImpl();
  public:
     BinlogQueue *_binlogs;

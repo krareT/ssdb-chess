@@ -18,13 +18,13 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 /**
  * @return -1: error, 0: item updated, 1: new item inserted
  */
-int SSDBImpl::hset(const Bytes &name, const Bytes &key, const Bytes &val, char log_type){
+int SSDBImpl::hset(const Bytes &name, const Bytes &key, const Bytes &val, char log_type) {
+    std::unique_lock<std::mutex> lock(_mutex);
     Transaction trans(_binlogs);
-
     int ret = hset_one(this, name, key, val, log_type);
-    if(ret >= 0){
+    if (ret >= 0) {
 	rocksdb::Status s = _binlogs->commit();
-	if(!s.ok()){
+	if (!s.ok()) {
 	    return -1;
 	}
     }
@@ -33,25 +33,25 @@ int SSDBImpl::hset(const Bytes &name, const Bytes &key, const Bytes &val, char l
 
 // hreplace actually
 int SSDBImpl::hset(const Bytes &key, const Bytes &val, char log_type) {
+    std::unique_lock<std::mutex> lock(_mutex);
     Transaction trans(_binlogs);
-
     int ret = hset_one(this, key, val, log_type);
-    if(ret >= 0){
+    if (ret >= 0) {
 	rocksdb::Status s = _binlogs->commit();
-	if(!s.ok()){
+	if (!s.ok()) {
 	    return -1;
 	}
     }
     return ret;
 }
 
-int SSDBImpl::hdel(const Bytes &name, const Bytes &key, char log_type){
+int SSDBImpl::hdel(const Bytes &name, const Bytes &key, char log_type) {
+    std::unique_lock<std::mutex> lock(_mutex);
     Transaction trans(_binlogs);
-
     int ret = hdel_one(this, name, key, log_type);
-    if(ret >= 0){
+    if (ret >= 0) {
 	rocksdb::Status s = _binlogs->commit();
-	if(!s.ok()){
+	if (!s.ok()) {
 	    return -1;
 	}
     }
@@ -280,7 +280,9 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &val, char log
     }
 
     std::string hkey = encode_hash_key(key);
-    ssdb->_binlogs->Merge(hkey, slice(val));
+    // Get complete value from master, should Put() not Merge
+    ssdb->_binlogs->Put(hkey, slice(val));
+    //ssdb->_binlogs->Merge(hkey, slice(val));
     ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
 
     return 0;
@@ -347,120 +349,6 @@ int decode_hash_value(const Bytes& slice, std::string* field, std::string* value
     }
 
     return 0;
-}
-
-// TBD(kg): string op should be optimized
-int insert_update_hash_value(const Bytes& slice, const Bytes& field,
-			     const Bytes& value, std::string* ret) {
-    /*
-     * buffer.reserve(slice.size() + encoded.size() + N)
-     * find field in slice, if exist:
-     *   buffer.append(slice).append(';').append(encoded)
-     *   return
-     * iter { field, value } pair:
-     *   if iter.field == field:
-     *     skip
-     *   else:
-     *     buf.append(field, iter.value)
-     *     update total size
-     * buf.append(encoded)
-     * shrink buf size
-     */
-    std::string encoded = encode_hash_value(field, value);
-    if (slice.empty()) {
-	*ret = encoded;
-	return 0;
-    }
-    std::string buf;
-    buf.reserve(slice.size() + 1 + encoded.size());
-    auto iter = std::search(slice.data(), slice.data() + slice.size(),
-			    field.data(), field.data() + field.size());
-    if (iter == slice.data() + slice.size()) { // insert, just append & return
-	buf.append(slice.data(), slice.size())
-	    .append(1, ';')
-	    .append(encoded.data(), encoded.size());
-	*ret = buf;
-	return 0;
-    }
-    Decoder decoder(slice.data(), slice.size());
-    int len = 0;
-    while (!decoder.is_end()) {
-	std::string elem_field, elem_value;
-	int field_len, value_len;
-	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
-	    return -1;
-	}
-	decoder.skip(1); // ':'
-	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
-	    return -1;
-	}
-	if (Bytes(field) == Bytes(elem_field)) {
-	    ; // skip
-	} else {
-	    std::string encoded = encode_hash_value(elem_field, elem_value);
-	    buf.append(encoded.data(), encoded.size())
-		.append(1, ';');
-	    len += encoded.size() + 1;
-	}
-	if (!decoder.is_end()) {
-	    decoder.skip(1); // ';'
-	}
-    }
-    // format till now: a4b4:14;
-    buf.append(encoded.data(), encoded.size());
-    // shrink() could only be applied on 'string'
-    buf.resize(len + encoded.size());
-    *ret = buf;
-    return 1;
-}
-
-// -1: error
-// 0: not exist
-// 1: done
-int remove_hash_value(const Bytes& slice, const Bytes& field,
-		      std::string* ret) {
-    if (slice.empty()) {
-	return 0;
-    }
-    auto iter = std::search(slice.data(), slice.data() + slice.size(),
-			    field.data(), field.data() + field.size());
-    if (iter == slice.data() + slice.size()) { // not exist
-	return 0;
-    }
-    Decoder decoder(slice.data(), slice.size());
-    int len = 0;
-    std::string buf;
-    buf.reserve(slice.size());
-    while (!decoder.is_end()) {
-	std::string elem_field, elem_value;
-	int field_len, value_len;
-	if ((field_len = decoder.read_8_data(&elem_field)) == -1) {
-	    return -1;
-	}
-	decoder.skip(1); // ':'
-	if ((value_len = decoder.read_8_data(&elem_value)) == -1) {
-	    return -1;
-	}
-	if (Bytes(field) == Bytes(elem_field)) {
-	    ; // skip
-	} else {
-	    std::string encoded = encode_hash_value(elem_field, elem_value);
-	    buf.append(encoded.data(), encoded.size())
-		.append(1, ';');
-	    len += encoded.size() + 1;
-	}
-	if (!decoder.is_end()) {
-	    decoder.skip(1); // ';'
-	}
-    }
-    // remove tail ';'
-    if (!buf.empty()) {
-	len -= 1;
-    }
-    // shrink() could only be applied on 'string'
-    buf.resize(len);
-    *ret = buf;
-    return 1;
 }
 
 int get_hash_value(const Bytes& slice, const Bytes& field, std::string* value) {
@@ -539,22 +427,4 @@ int get_hash_value_count(const Bytes& slice) {
 	cnt++;
     }
     return cnt;
-}
-
-int TEST_insert_update_hash_value(const Bytes& slice, const Bytes& field, const Bytes& value,
-			     std::string* ret) {
-    return insert_update_hash_value(slice, field, value, ret);
-}
-
-int TEST_remove_hash_value(const Bytes& slice, const Bytes& field,
-		      std::string* ret) {
-    return remove_hash_value(slice, field, ret);
-}
-
-int TEST_get_hash_values(const Bytes& slice, std::deque<StrPair>& values) {
-    return get_hash_values(slice, values);
-}
-
-int TEST_get_hash_value_count(const Bytes& slice) {
-    return get_hash_value_count(slice);
 }
