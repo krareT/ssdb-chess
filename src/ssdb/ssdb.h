@@ -63,6 +63,7 @@ class SSDB{
     virtual int hdel(const Bytes &name, const Bytes &key, char log_type=BinlogType::SYNC) = 0;
     // -1: error, 1: ok, 0: value is not an integer or out of range
     virtual int hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type=BinlogType::SYNC) = 0;
+    virtual int migrate_hset(const std::vector<Bytes>& items, char log_type=BinlogType::SYNC) = 0;
 
     virtual int64_t hsize(const Bytes &name) = 0;
     virtual int64_t hclear(const Bytes &name) = 0;

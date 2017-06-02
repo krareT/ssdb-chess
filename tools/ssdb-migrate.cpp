@@ -16,7 +16,10 @@
 #include "block-queue.h"
 
 #define BATCH_SIZE 100
-static const int kQueueHardLimit = 10000;
+// per Data (with chess data) is about 50+byte,
+// kQueueHardLimit = 10M ~ (1.5G RAM)
+static const int kQueueHardLimit = 100 * 1000 * 1000;
+static const int kBatchSize = 100;
 
 struct Data {
     std::string key;
@@ -30,7 +33,7 @@ struct Data {
 ssdb::Client *src = NULL;
 ssdb::Client *dst = NULL;
 
-static const int kThreads = 8;
+static const int kThreads = 1;
 std::vector<ssdb::Client*> clients;
 std::vector<std::thread> threads;
 BlockQueue<Data> dqueue;
@@ -94,14 +97,27 @@ void parse_args(AppArgs *args, int argc, char **argv){
 }
 
 void send_req(int tid) {
+    std::vector<std::string> items;
     while (true) {
 	Data data = dqueue.pop();
-	if (data.key.empty()) { // end signal
-	    break;
+	if (!data.key.empty()) {
+	    items.push_back(data.key);
+	    items.push_back(data.field);
+	    items.push_back(data.value);
 	}
-	ssdb::Status s = clients[tid]->hset(data.key, data.field, data.value);
-	if(!s.ok()){
-	    log_error("dst hset error! %s", s.code().c_str());
+	if (data.key.empty() || items.size() >= kBatchSize) { // end signal
+	    if (items.empty()) {
+		break;
+	    }
+	    ssdb::Status s = clients[tid]->migrate_hset(items);
+	    if (!s.ok()) {
+		log_error("dst hset error! %s", s.code().c_str());
+		exit(1);
+	    }
+	    if (data.key.empty()) {
+		break;
+	    }
+	    items.clear();
 	}
     }
 }
@@ -128,25 +144,6 @@ bool init_client(const std::string &ip, int port) {
     }
     return true;
 }
-
-/*int hashset(ssdb::Client *client, const std::string& key,
-	    const std::string& field, const std::string& value) {
-    ssdb::Status s = client->hset(key, field, value);
-    if(!s.ok()){
-	log_error("dst hset error! %s", s.code().c_str());
-	return -1;
-    }
-    return 0;
-    }*/
-
-/*void check_version(ssdb::Client *client){
-  const std::vector<std::string>* resp;
-  resp = client->request("version");
-  if(!resp || resp->size() < 2 || resp->at(0) != "ok"){
-  fprintf(stderr, "ERROR: ssdb-server 1.9.0 or higher is required!\n");
-  exit(1);
-  }
-  }*/
 
 int main(int argc, char **argv) {
     welcome();
@@ -234,13 +231,13 @@ int main(int argc, char **argv) {
 		    data.key = std::string(hkey.data(), index);
 		    data.field = std::string(hkey.data() + index + 1, hkey.size() - index - 1);
 		    data.value = std::string(val.data(), val.size());
-
+		    
 		    if (dump_count > 0 && dump_count % 100 == 0) { // sample keys
 		    	printf("key: %s\n", str_escape(data.key.data(), data.key.size()).c_str());
 		    }	
 		    dqueue.push(data);
 		    if (dqueue.size() > kQueueHardLimit) {
-			sleep(2);
+			usleep(1000);
 		    }
 		}
 

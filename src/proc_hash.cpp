@@ -103,6 +103,26 @@ int proc_multi_hdel(NetworkServer *net, Link *link, const Request &req, Response
     return 0;
 }
 
+int proc_migrate_hset(NetworkServer *net, Link *link, const Request &req, Response *resp){
+    SSDBServer *serv = (SSDBServer *)net->data;
+    if (req.size() < 4 || (req.size() - 1) % 3 != 0) {
+	resp->push_back("client_error with item count");
+    } else {
+	int num = 0;
+	const std::vector<Bytes> items(req.begin() + 1, req.end());
+	int ret = serv->ssdb->migrate_hset(items);
+	if (ret == -1) {
+	    resp->push_back("error");
+	    return 0;
+	} else {
+	    num += ret;
+	}
+	resp->reply_int(0, num);
+    }
+    return 0;
+}
+
+
 int proc_multi_hget(NetworkServer *net, Link *link, const Request &req, Response *resp){
     CHECK_NUM_PARAMS(3);
     SSDBServer *serv = (SSDBServer *)net->data;

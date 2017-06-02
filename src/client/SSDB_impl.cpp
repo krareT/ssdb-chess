@@ -387,6 +387,17 @@ Status ClientImpl::multi_hdel(const std::string &name, const std::vector<std::st
 	return s;
 }
 
+Status ClientImpl::migrate_hset(const std::vector<std::string> &items) {
+	const std::vector<std::string> *resp;
+	std::vector<std::string> list(items.begin(), items.end());
+	/*for (auto str : items) {
+	    list.push_back(str);
+	    }*/
+	resp = this->request("migrate_hset", list);
+	Status s(resp);
+	return s;
+}
+
 /******************** zset *************************/
 
 

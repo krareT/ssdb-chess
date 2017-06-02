@@ -171,6 +171,7 @@ public:
 		std::vector<std::string> *ret) = 0;
 	virtual Status multi_hset(const std::string &name, const std::map<std::string, std::string> &kvs) = 0;
 	virtual Status multi_hdel(const std::string &name, const std::vector<std::string> &keys) = 0;
+	virtual Status migrate_hset(const std::vector<std::string> &items) = 0;
 	/// @}
 
 

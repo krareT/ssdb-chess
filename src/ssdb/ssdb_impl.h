@@ -86,6 +86,7 @@ class SSDBImpl : public SSDB {
     virtual int hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type=BinlogType::SYNC);
     //int multi_hset(const Bytes &name, const std::vector<Bytes> &kvs, int offset=0, char log_type=BinlogType::SYNC);
     //int multi_hdel(const Bytes &name, const std::vector<Bytes> &keys, int offset=0, char log_type=BinlogType::SYNC);
+    virtual int migrate_hset(const std::vector<Bytes>& items, char log_type=BinlogType::SYNC);
 
     virtual int64_t hsize(const Bytes &name);
     virtual int64_t hclear(const Bytes &name);

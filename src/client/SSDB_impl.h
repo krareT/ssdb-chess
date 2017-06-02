@@ -61,6 +61,7 @@ public:
 	virtual Status multi_hget(const std::string &name, const std::vector<std::string> &keys,
 		std::vector<std::string> *ret);
 	virtual Status multi_hset(const std::string &name, const std::map<std::string, std::string> &kvs);
+	virtual Status migrate_hset(const std::vector<std::string> &items);
 	virtual Status multi_hdel(const std::string &name, const std::vector<std::string> &keys);
 
 	virtual Status zget(const std::string &name, const std::string &key, int64_t *ret);

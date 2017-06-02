@@ -58,6 +58,27 @@ int SSDBImpl::hdel(const Bytes &name, const Bytes &key, char log_type) {
     return ret;
 }
 
+// only used during migration...
+int SSDBImpl::migrate_hset(const std::vector<Bytes>& items, char log_type) {
+    std::unique_lock<std::mutex> lock(_mutex);
+    Transaction trans(_binlogs);
+    bool suc = true;
+    for (int i = 0; i < items.size(); i += 3) {
+	int ret = hset_one(this, items[i], items[i + 1], items[i + 2], log_type);
+	if (ret == -1) {
+	    suc = false;
+	    break;
+	}
+    }
+    if (suc) {
+	rocksdb::Status s = _binlogs->commit();
+	if (!s.ok()) {
+	    return -1;
+	}
+    }
+    return items.size() / 3;
+}
+
 // TBD(kg): not supported yet
 int SSDBImpl::hincr(const Bytes &name, const Bytes &key, int64_t by, int64_t *new_val, char log_type){
     /*Transaction trans(_binlogs);
@@ -304,6 +325,7 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
 
     return 0;
 }
+
 
 std::string encode_hash_key(const Bytes &key) {
     std::string buf;
