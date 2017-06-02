@@ -1,5 +1,6 @@
 
 #include <time.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
@@ -15,6 +16,7 @@
 #include "block-queue.h"
 
 #define BATCH_SIZE 100
+static const int kQueueHardLimit = 10000;
 
 struct Data {
     std::string key;
@@ -109,7 +111,7 @@ bool init_client(const std::string &ip, int port) {
 	ssdb::Client *client = ssdb::Client::connect(ip, port);
 	if (client == NULL) {
 	    log_error("fail to connect to server!");
-	    return NULL;
+	    return false;
 	}
 	const std::vector<std::string>* resp;
 	resp = client->request("ignore_key_range");
@@ -237,6 +239,9 @@ int main(int argc, char **argv) {
 		    	printf("key: %s\n", str_escape(data.key.data(), data.key.size()).c_str());
 		    }	
 		    dqueue.push(data);
+		    if (dqueue.size() > kQueueHardLimit) {
+			sleep(2);
+		    }
 		}
 
 		dump_count ++;
@@ -265,10 +270,10 @@ int main(int argc, char **argv) {
 
     time_t etime;
     time(&etime);
-    printf("stime %d, etime %d\n", stime, etime);
+    printf("stime %ld, etime %ld\n", stime, etime);
     time_t ts = (etime == stime) ? 1 : (etime - stime);
     double speed = (double)dump_count / ts;
-    printf("insert: %.2fk, time: %d s\n", speed / 1000, ts);
+    printf("insert: %.2fk, time: %ld s\n", speed / 1000, ts);
 
     /*
       {
