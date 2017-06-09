@@ -18,7 +18,7 @@
 #define BATCH_SIZE 100
 // per Data (with chess data) is about 50+byte,
 // kQueueHardLimit = 10M ~ (1.5G RAM)
-static const int kQueueHardLimit = 100 * 1000 * 1000;
+static const int kQueueHardLimit = 1 * 1000 * 1000;
 static const int kBatchSize = 100;
 
 struct Data {
