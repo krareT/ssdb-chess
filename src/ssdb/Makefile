@@ -20,7 +20,7 @@ options.o: ssdb.h options.h options.cpp
 	${CXX} ${CFLAGS} -c options.cpp
 t_kv.o: ssdb.h t_kv.h t_kv.cpp
 	${CXX} ${CFLAGS} -c t_kv.cpp
-t_hash.o: ssdb.h t_hash.h t_hash.cpp
+t_hash.o: ssdb.h t_hash.h t_hash.cpp hash_encoder.h
 	${CXX} ${CFLAGS} -c t_hash.cpp
 t_zset.o: ssdb.h t_zset.h t_zset.cpp
 	${CXX} ${CFLAGS} -c t_zset.cpp
