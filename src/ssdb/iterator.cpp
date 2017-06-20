@@ -15,9 +15,9 @@
 #include "rocksdb/iterator.h"
 
 Iterator::Iterator(rocksdb::Iterator *it,
-		   const std::string &end,
-		   uint64_t limit,
-		   Direction direction) {
+				   const std::string &end,
+				   uint64_t limit,
+				   Direction direction) {
     this->it = it;
     this->end = end;
     this->limit = limit;
@@ -41,42 +41,42 @@ Bytes Iterator::val(){
 
 bool Iterator::skip(uint64_t offset){
     while(offset-- > 0){
-	if(this->next() == false){
-	    return false;
-	}
+		if(this->next() == false){
+			return false;
+		}
     }
     return true;
 }
 
 bool Iterator::next(){
     if(limit == 0){
-	return false;
+		return false;
     }
     if(is_first){
-	is_first = false;
+		is_first = false;
     }else{
-	if(direction == FORWARD){
-	    it->Next();
-	}else{
-	    it->Prev();
-	}
+		if(direction == FORWARD){
+			it->Next();
+		}else{
+			it->Prev();
+		}
     }
 
     if(!it->Valid()){
-	// make next() safe to be called after previous return false.
-	limit = 0;
-	return false;
+		// make next() safe to be called after previous return false.
+		limit = 0;
+		return false;
     }
     if(direction == FORWARD){
-	if(!end.empty() && it->key().compare(end) > 0){
-	    limit = 0;
-	    return false;
-	}
+		if(!end.empty() && it->key().compare(end) > 0){
+			limit = 0;
+			return false;
+		}
     }else{
-	if(!end.empty() && it->key().compare(end) < 0){
-	    limit = 0;
-	    return false;
-	}
+		if(!end.empty() && it->key().compare(end) < 0){
+			limit = 0;
+			return false;
+		}
     }
     limit --;
     return true;
@@ -100,20 +100,20 @@ void KIterator::return_val(bool onoff){
 
 bool KIterator::next(){
     while(it->next()){
-	Bytes ks = it->key();
-	Bytes vs = it->val();
-	//dump(ks.data(), ks.size(), "z.next");
-	//dump(vs.data(), vs.size(), "z.next");
-	if(ks.data()[0] != DataType::KV){
-	    return false;
-	}
-	if(decode_kv_key(ks, &this->key) == -1){
-	    continue;
-	}
-	if(return_val_){
-	    this->val.assign(vs.data(), vs.size());
-	}
-	return true;
+		Bytes ks = it->key();
+		Bytes vs = it->val();
+		//dump(ks.data(), ks.size(), "z.next");
+		//dump(vs.data(), vs.size(), "z.next");
+		if(ks.data()[0] != DataType::KV){
+			return false;
+		}
+		if(decode_kv_key(ks, &this->key) == -1){
+			continue;
+		}
+		if(return_val_){
+			this->val.assign(vs.data(), vs.size());
+		}
+		return true;
     }
     return  false;
 }
@@ -140,34 +140,35 @@ void HIterator::return_val(bool onoff){
 // TBD(kg): refactor HIterator since we've changed the layout of key, field, value
 bool HIterator::next() {
     if (_index == -1) { // init first, mutex TBD
-	_index = 0;
-	if (_it->next()) {
-	    Bytes ks = _it->key();
-	    std::string key;
-	    if (ks.data()[0] != DataType::HASH ||
-		decode_hash_key(ks, &key) == -1 ||
-		key != this->_key) {
-		_valid = false;
-		return _valid;
-	    }
+		_index = 0;
+		HashEncoder* encoder = new ChessHashEncoder;
+		if (_it->next()) {
+			Bytes ks = _it->key();
+			std::string key;
+			if (ks.data()[0] != DataType::HASH ||
+				encoder->decode_key(ks, &key) == -1 ||
+				key != this->_key) {
+				_valid = false;
+				return _valid;
+			}
 
-	    if (_return_val) {
-		Bytes vs = _it->val();
-		if (get_hash_values(Bytes(vs), _values) == -1) {
-		    _valid = false;
-		    return _valid;
+			if (_return_val) {
+				Bytes vs = _it->val();
+				if (get_hash_values(Bytes(vs), _values) == -1) {
+					_valid = false;
+					return _valid;
+				}
+			}
+			_valid = true;
 		}
-	    }
-	    _valid = true;
-	}
     }
     if (_index >= _values.size() || !_valid) {
-	return false;
+		return false;
     } else {
-	_field = _values[_index].first;
-	_value = _values[_index].second;
-	_index++;
-	return true;
+		_field = _values[_index].first;
+		_value = _values[_index].second;
+		_index++;
+		return true;
     }
 }
 
@@ -184,26 +185,26 @@ ZIterator::~ZIterator(){
 		
 bool ZIterator::skip(uint64_t offset){
     while(offset-- > 0){
-	if(this->next() == false){
-	    return false;
-	}
+		if(this->next() == false){
+			return false;
+		}
     }
     return true;
 }
 
 bool ZIterator::next(){
     while(it->next()){
-	Bytes ks = it->key();
-	//Bytes vs = it->val();
-	//dump(ks.data(), ks.size(), "z.next");
-	//dump(vs.data(), vs.size(), "z.next");
-	if(ks.data()[0] != DataType::ZSCORE){
-	    return false;
-	}
-	if(decode_zscore_key(ks, NULL, &key, &score) == -1){
-	    continue;
-	}
-	return true;
+		Bytes ks = it->key();
+		//Bytes vs = it->val();
+		//dump(ks.data(), ks.size(), "z.next");
+		//dump(vs.data(), vs.size(), "z.next");
+		if(ks.data()[0] != DataType::ZSCORE){
+			return false;
+		}
+		if(decode_zscore_key(ks, NULL, &key, &score) == -1){
+			continue;
+		}
+		return true;
     }
     return false;
 }

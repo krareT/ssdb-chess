@@ -20,6 +20,7 @@
 #include "t_hash.h"
 #include "t_zset.h"
 #include "t_queue.h"
+#include "hash_encoder.h"
 
 inline
 static rocksdb::Slice slice(const Bytes &b){
@@ -33,6 +34,7 @@ class SSDBImpl : public SSDB {
     rocksdb::Options options;
     std::vector<rocksdb::ColumnFamilyHandle*> _cfHandles;
     std::mutex _mutex;
+	HashEncoder* _encoder;
     
     SSDBImpl();
  public:

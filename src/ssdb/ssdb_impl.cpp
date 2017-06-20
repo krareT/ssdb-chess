@@ -19,14 +19,15 @@
 SSDBImpl::SSDBImpl(){
     ldb = NULL;
     _binlogs = NULL;
+	_encoder = new ChessHashEncoder;
 }
 
 SSDBImpl::~SSDBImpl(){
     if(_binlogs){
-	delete _binlogs;
+		delete _binlogs;
     }
     if(ldb){
-	delete ldb;
+		delete ldb;
     }
     /*if(options.block_cache){
       delete options.block_cache;
@@ -65,30 +66,30 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     oplogOption.write_buffer_size = opt.write_buffer_size * 1024 * 1024;
     oplogOption.target_file_size_base = oplogOption.write_buffer_size;
     std::vector<rocksdb::ColumnFamilyDescriptor> cfDescriptors = {
-	rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName, ssdb->options),
-	rocksdb::ColumnFamilyDescriptor(kOplogCF, oplogOption)
+		rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName, ssdb->options),
+		rocksdb::ColumnFamilyDescriptor(kOplogCF, oplogOption)
     };
     rocksdb::DB* db = nullptr;
     rocksdb::Status status;
     int cnt = 0;
     while (cnt < 2) {
-	status = rocksdb::DB::Open(ssdb->options, dir, cfDescriptors, &ssdb->_cfHandles, &db);
-	if (!status.ok()) {
-	    status = rocksdb::DB::OpenForReadOnly(ssdb->options, dir, &db);
-	    assert(status.ok());
-	    rocksdb::ColumnFamilyHandle* cf = nullptr;
-	    status = db->CreateColumnFamily(oplogOption, kOplogCF, &cf);
-	    assert(status.ok());
-	    delete cf;
-	    delete db;
-	    cnt ++;
-	} else {
-	    break;
-	}
+		status = rocksdb::DB::Open(ssdb->options, dir, cfDescriptors, &ssdb->_cfHandles, &db);
+		if (!status.ok()) {
+			status = rocksdb::DB::OpenForReadOnly(ssdb->options, dir, &db);
+			assert(status.ok());
+			rocksdb::ColumnFamilyHandle* cf = nullptr;
+			status = db->CreateColumnFamily(oplogOption, kOplogCF, &cf);
+			assert(status.ok());
+			delete cf;
+			delete db;
+			cnt ++;
+		} else {
+			break;
+		}
     }
     if (!status.ok()) {
-	log_error("open db failed: %s", status.ToString().c_str());
-	goto err;
+		log_error("open db failed: %s", status.ToString().c_str());
+		goto err;
     }
     ssdb->ldb = db;
     ssdb->_binlogs = new BinlogQueue(ssdb->ldb, ssdb->_cfHandles, opt.binlog, opt.binlog_capacity);
@@ -96,7 +97,7 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     return ssdb;
  err:
     if(ssdb){
-	delete ssdb;
+		delete ssdb;
     }
     return NULL;
 }
@@ -106,29 +107,29 @@ int SSDBImpl::flushdb(){
     int ret = 0;
     bool stop = false;
     while(!stop){
-	rocksdb::Iterator *it;
-	rocksdb::ReadOptions iterate_options;
-	iterate_options.fill_cache = false;
-	rocksdb::WriteOptions write_opts;
+		rocksdb::Iterator *it;
+		rocksdb::ReadOptions iterate_options;
+		iterate_options.fill_cache = false;
+		rocksdb::WriteOptions write_opts;
 
-	it = ldb->NewIterator(iterate_options);
-	it->SeekToFirst();
-	for(int i=0; i<10000; i++){
-	    if(!it->Valid()){
-		stop = true;
-		break;
-	    }
-	    //log_debug("%s", hexmem(it->key().data(), it->key().size()).c_str());
-	    rocksdb::Status s = ldb->Delete(write_opts, it->key());
-	    if(!s.ok()){
-		log_error("del error: %s", s.ToString().c_str());
-		stop = true;
-		ret = -1;
-		break;
-	    }
-	    it->Next();
-	}
-	delete it;
+		it = ldb->NewIterator(iterate_options);
+		it->SeekToFirst();
+		for(int i=0; i<10000; i++){
+			if(!it->Valid()){
+				stop = true;
+				break;
+			}
+			//log_debug("%s", hexmem(it->key().data(), it->key().size()).c_str());
+			rocksdb::Status s = ldb->Delete(write_opts, it->key());
+			if(!s.ok()){
+				log_error("del error: %s", s.ToString().c_str());
+				stop = true;
+				ret = -1;
+				break;
+			}
+			it->Next();
+		}
+		delete it;
     }
     _binlogs->flush();
     return ret;
@@ -142,8 +143,8 @@ Iterator* SSDBImpl::iterator(const std::string &start, const std::string &end, u
     it->Seek(start);
     // TBD(kg): why Next() is called here ?
     /*if(it->Valid() && it->key() == start){
-	it->Next();
-	}*/
+	  it->Next();
+	  }*/
     return new Iterator(it, end, limit);
 }
 
@@ -154,9 +155,9 @@ Iterator* SSDBImpl::rev_iterator(const std::string &start, const std::string &en
     it = ldb->NewIterator(iterate_options);
     it->Seek(start);
     if(!it->Valid()){
-	it->SeekToLast();
+		it->SeekToLast();
     }else{
-	it->Prev();
+		it->Prev();
     }
     return new Iterator(it, end, limit, Iterator::BACKWARD);
 }
@@ -167,8 +168,8 @@ int SSDBImpl::raw_set(const Bytes &key, const Bytes &val){
     rocksdb::WriteOptions write_opts;
     rocksdb::Status s = ldb->Put(write_opts, slice(key), slice(val));
     if(!s.ok()){
-	log_error("set error: %s", s.ToString().c_str());
-	return -1;
+		log_error("set error: %s", s.ToString().c_str());
+		return -1;
     }
     return 1;
 }
@@ -177,8 +178,8 @@ int SSDBImpl::raw_del(const Bytes &key){
     rocksdb::WriteOptions write_opts;
     rocksdb::Status s = ldb->Delete(write_opts, slice(key));
     if(!s.ok()){
-	log_error("del error: %s", s.ToString().c_str());
-	return -1;
+		log_error("del error: %s", s.ToString().c_str());
+		return -1;
     }
     return 1;
 }
@@ -188,11 +189,11 @@ int SSDBImpl::raw_get(const Bytes &key, std::string *val){
     opts.fill_cache = false;
     rocksdb::Status s = ldb->Get(opts, slice(key), val);
     if(s.IsNotFound()){
-	return 0;
+		return 0;
     }
     if(!s.ok()){
-	log_error("get error: %s", s.ToString().c_str());
-	return -1;
+		log_error("get error: %s", s.ToString().c_str());
+		return -1;
     }
     return 1;
 }
@@ -227,12 +228,12 @@ std::vector<std::string> SSDBImpl::info(){
     //keys.push_back("rocksdb.sstables");
 
     for(size_t i=0; i<keys.size(); i++){
-	std::string key = keys[i];
-	std::string val;
-	if(ldb->GetProperty(key, &val)){
-	    info.push_back(key);
-	    info.push_back(val);
-	}
+		std::string key = keys[i];
+		std::string val;
+		if(ldb->GetProperty(key, &val)){
+			info.push_back(key);
+			info.push_back(val);
+		}
     }
 
     return info;
@@ -241,7 +242,7 @@ std::vector<std::string> SSDBImpl::info(){
 void SSDBImpl::compact(){
     //ldb->CompactRange(NULL, NULL);
     for (int i = 0; i < _cfHandles.size(); i++) {
-	ldb->Flush(rocksdb::FlushOptions(), _cfHandles[i]);
+		ldb->Flush(rocksdb::FlushOptions(), _cfHandles[i]);
     }
 }
 
@@ -256,114 +257,114 @@ int SSDBImpl::key_range(std::vector<std::string> *keys){
 	
     it = this->iterator(encode_kv_key(""), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::KV){
-	    std::string n;
-	    if(decode_kv_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		kstart = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::KV){
+			std::string n;
+			if(decode_kv_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				kstart = n;
+			}
+		}
     }
     delete it;
 	
     it = this->rev_iterator(encode_kv_key("\xff"), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::KV){
-	    std::string n;
-	    if(decode_kv_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		kend = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::KV){
+			std::string n;
+			if(decode_kv_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				kend = n;
+			}
+		}
     }
     delete it;
 
     // TBD(kg): use hkey instead of hsize_key
     /*it = this->iterator(encode_hsize_key(""), "", 1);
-    if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::HSIZE){
-	    std::string n;
-	    if(decode_hsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		hstart = n;
-	    }
-	}
-    }
-    delete it;
+	  if(it->next()){
+	  Bytes ks = it->key();
+	  if(ks.data()[0] == DataType::HSIZE){
+	  std::string n;
+	  if(decode_hsize_key(ks, &n) == -1){
+	  ret = -1;
+	  }else{
+	  hstart = n;
+	  }
+	  }
+	  }
+	  delete it;
 	
-    it = this->rev_iterator(encode_hsize_key("\xff"), "", 1);
-    if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::HSIZE){
-	    std::string n;
-	    if(decode_hsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		hend = n;
-	    }
-	}
-    }
-    delete it;*/
+	  it = this->rev_iterator(encode_hsize_key("\xff"), "", 1);
+	  if(it->next()){
+	  Bytes ks = it->key();
+	  if(ks.data()[0] == DataType::HSIZE){
+	  std::string n;
+	  if(decode_hsize_key(ks, &n) == -1){
+	  ret = -1;
+	  }else{
+	  hend = n;
+	  }
+	  }
+	  }
+	  delete it;*/
 	
     it = this->iterator(encode_zsize_key(""), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::ZSIZE){
-	    std::string n;
-	    if(decode_zsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		zstart = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::ZSIZE){
+			std::string n;
+			if(decode_zsize_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				zstart = n;
+			}
+		}
     }
     delete it;
 	
     it = this->rev_iterator(encode_zsize_key("\xff"), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::ZSIZE){
-	    std::string n;
-	    if(decode_zsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		zend = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::ZSIZE){
+			std::string n;
+			if(decode_zsize_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				zend = n;
+			}
+		}
     }
     delete it;
 	
     it = this->iterator(encode_qsize_key(""), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::QSIZE){
-	    std::string n;
-	    if(decode_qsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		qstart = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::QSIZE){
+			std::string n;
+			if(decode_qsize_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				qstart = n;
+			}
+		}
     }
     delete it;
 	
     it = this->rev_iterator(encode_qsize_key("\xff"), "", 1);
     if(it->next()){
-	Bytes ks = it->key();
-	if(ks.data()[0] == DataType::QSIZE){
-	    std::string n;
-	    if(decode_qsize_key(ks, &n) == -1){
-		ret = -1;
-	    }else{
-		qend = n;
-	    }
-	}
+		Bytes ks = it->key();
+		if(ks.data()[0] == DataType::QSIZE){
+			std::string n;
+			if(decode_qsize_key(ks, &n) == -1){
+				ret = -1;
+			}else{
+				qend = n;
+			}
+		}
     }
     delete it;
 

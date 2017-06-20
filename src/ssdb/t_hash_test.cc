@@ -6,6 +6,7 @@
 #include "ssdb.h"
 #include "ssdb_impl.h"
 #include "t_hash.h"
+#include "hash_encoder.h"
 #include "chess_merger.h"
 
 int Factorial(int n) {
@@ -16,29 +17,30 @@ int Factorial(int n) {
 using std::cout;
 using std::endl;
 
+static HashEncoder* gEncoder = new ChessHashEncoder;
 static const std::string kDBPath = "./testdb";
 
 // The fixture for testing class Foo.
 class THashTest : public ::testing::Test {
 protected:
     virtual void SetUp() {
-	// Code here will be called immediately after the constructor (right
-	// before each test).
-	Options options;
+		// Code here will be called immediately after the constructor (right
+		// before each test).
+		Options options;
 
-	// open DB
-	_ssdb = SSDB::open(Options(), kDBPath);
-	//rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &_db);
-	//assert(s.ok());
+		// open DB
+		_ssdb = SSDB::open(Options(), kDBPath);
+		//rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &_db);
+		//assert(s.ok());
     }
 
     virtual void TearDown() {
-	// Code here will be called immediately after each test (right
-	// before the destructor).
-	delete _ssdb;
+		// Code here will be called immediately after each test (right
+		// before the destructor).
+		delete _ssdb;
 
-	std::string cmd = "rm -rf " + kDBPath + "/*";
-	system (cmd.c_str());
+		std::string cmd = "rm -rf " + kDBPath + "/*";
+		system (cmd.c_str());
     }
 
     // Objects declared here can be used by all tests in the test case for ....
@@ -48,33 +50,32 @@ protected:
 };
 
 TEST_F(THashTest, SetAndCnt) {
-
-    std::string key1 = "key1", field1 = "field1";
+    std::string key1 = "key1", field1 = "e7b8";
     int cnt = _ssdb->hsize(key1);
     ASSERT_EQ(0, cnt);
 	
-    int ret = _ssdb->hset(key1, field1, "value1", BinlogCommand::HSET);
+    int ret = _ssdb->hset(key1, field1, "04", BinlogCommand::HSET);
     ASSERT_NE(-1, ret);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(1, cnt);
 
-    std::string field2 = "field2";
-    ret = _ssdb->hset(key1, field2, "value2", BinlogCommand::HSET);
+    std::string field2 = "b8e9";
+    ret = _ssdb->hset(key1, field2, "14", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(2, cnt);
 
     // update field1 & field2
-    ret = _ssdb->hset(key1, field1, "value1-update", BinlogCommand::HSET);
+    ret = _ssdb->hset(key1, field1, "-4", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(2, cnt);
 
-    ret = _ssdb->hset(key1, field2, "value2-update", BinlogCommand::HSET);
+    ret = _ssdb->hset(key1, field2, "-14", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(2, cnt);
 }
 
 TEST_F(THashTest, SetAndGet) {
-    std::string key1 = "key1", field1 = "field1", value1 = "value1";
+    std::string key1 = "key1", field1 = "e7b8", value1 = "30000";
     int cnt = _ssdb->hsize(key1);
     ASSERT_EQ(0, cnt);
 
@@ -84,7 +85,7 @@ TEST_F(THashTest, SetAndGet) {
     _ssdb->hget(key1, field1, &result);
     EXPECT_EQ(value1, result);
 
-    std::string field2 = "field2", value2 = "value2";
+    std::string field2 = "a0b0", value2 = "-30000";
     ret = _ssdb->hset(key1, field2, value2, BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(2, cnt);
@@ -95,9 +96,8 @@ TEST_F(THashTest, SetAndGet) {
 }
 
 TEST_F(THashTest, DelAndCnt) {
-
-    std::string key1 = "key1", field1 = "field1", field2 = "field2";
-    int ret = _ssdb->hset(key1, field1, "value1", BinlogCommand::HSET);
+    std::string key1 = "key1", field1 = "a9i9", field2 = "b2c3";
+    int ret = _ssdb->hset(key1, field1, "0", BinlogCommand::HSET);
     int cnt = _ssdb->hsize(key1);
     ASSERT_EQ(1, cnt);
 
@@ -109,8 +109,8 @@ TEST_F(THashTest, DelAndCnt) {
     ASSERT_EQ(0, cnt);
 
     // add 2 fields, remove 1st one
-    _ssdb->hset(key1, field1, "value1", BinlogCommand::HSET);
-    _ssdb->hset(key1, field2, "value2", BinlogCommand::HSET);
+    _ssdb->hset(key1, field1, "1414", BinlogCommand::HSET);
+    _ssdb->hset(key1, field2, "4141", BinlogCommand::HSET);
     ret = _ssdb->hdel(key1, field1, BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
     ASSERT_EQ(1, cnt);
@@ -120,16 +120,16 @@ TEST_F(THashTest, DelAndCnt) {
     ASSERT_EQ(0, cnt);
 }
 
-TEST_F(THashTest, ListKeys) {
 
-    std::string key1 = "key1", field1 = "field1";
+TEST_F(THashTest, ListKeys) {
+    std::string key1 = "key1", field1 = "a7b4";
     std::string key2 = "key2";
     std::vector<std::string> names;
     _ssdb->hlist(key1, key2, 100, &names);
     ASSERT_EQ(0, names.size());
     
-    _ssdb->hset(key1, field1, "value1", BinlogCommand::HSET);
-    _ssdb->hset(key2, field1, "value1", BinlogCommand::HSET);
+    _ssdb->hset(key1, field1, "-2134", BinlogCommand::HSET);
+    _ssdb->hset(key2, field1, "29999", BinlogCommand::HSET);
     
     _ssdb->hlist(key1, key2, 100, &names);
     ASSERT_EQ(2, names.size());
@@ -139,16 +139,16 @@ TEST_F(THashTest, ListKeys) {
 
 TEST_F(THashTest, Scan) {
     std::string key1 = "key1",
-	field1 = "field1", field2 = "field2",
-	value1 = "value1", value2 = "value2";
+		field1 = "f9h7", field2 = "c4d4",
+		value1 = "-900", value2 = "900";
     
-    int ret = _ssdb->hset(key1, field1, value1, BinlogCommand::HSET);
+    _ssdb->hset(key1, field1, value1, BinlogCommand::HSET);
     _ssdb->hset(key1, field2, value2, BinlogCommand::HSET);
 
     HIterator* iter = _ssdb->hscan(key1, "", "", 100);
     std::deque<StrPair> arr;
     while (iter->next()) {
-	arr.push_back(std::make_pair(iter->_field, iter->_value));
+		arr.push_back(std::make_pair(iter->_field, iter->_value));
     }
 
     ASSERT_EQ(2, arr.size());
@@ -171,139 +171,138 @@ TEST(FullMergerTest, EmptyExistingTest) {
     ChessMergeOperator chessMerger;
 
     {
-	// two inserts
-	operands.clear();
+		// two inserts
+		operands.clear();
 
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
+		
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		new_value = "";
+		expected= ep2 + ";" + ep1;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	new_value = "";
-	expected = ep2 + ";" + ep1;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
-
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
-
     {
-	// one insert, one update
-	operands.clear();
+		// one insert, one update
+		operands.clear();
 	
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
 
-	field = "a3b4"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		field = "a3b4"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	new_value = "";
-	expected = ep2;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		new_value = "";
+		expected = ep2;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one insert, one delete
-	operands.clear();
+		// one insert, one delete
+		operands.clear();
 
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
 
-	field = "a3b4"; value = "_deleted_";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		field = "a3b4"; value = kDelTag;
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	expected = ""; new_value = "";
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		expected = ""; new_value = "";
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one delete, one insert
-	operands.clear();
-	field = value = expected = "";
-	field = "a3b4"; value = "_deleted_";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		// one delete, one insert
+		operands.clear();
+		field = value = expected = "";
+		field = "a3b4"; value = kDelTag;
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
 	
-	field = "a3b4"; value = "112";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		field = "a3b4"; value = "112";
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	new_value = "";
-	expected = ep2;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		new_value = "";
+		expected = ep2;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// two inserts, one update
-	operands.clear();
+		// two inserts, one update
+		operands.clear();
 
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	field = "a3b4"; value = "11445";
-	std::string ep3 = encode_hash_value(field, value);
-	operands.push_back(ep3);
+		field = "a3b4"; value = "11445";
+		std::string ep3 = gEncoder->encode_value(field, value);
+		operands.push_back(ep3);
 
-	new_value = "";
-	expected = ep3 + ";" + ep2;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		new_value = "";
+		expected = ep3 + ";" + ep2;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// two inserts, one delete
-	operands.clear();
+		// two inserts, one delete
+		operands.clear();
 
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
-	operands.push_back(ep1);
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
+		operands.push_back(ep1);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
-	operands.push_back(ep2);
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
+		operands.push_back(ep2);
 
-	field = "a3b3"; value = "_deleted_";
-	std::string ep3 = encode_hash_value(field, value);
-	operands.push_back(ep3);
+		field = "a3b3"; value = kDelTag;
+		std::string ep3 = gEncoder->encode_value(field, value);
+		operands.push_back(ep3);
 
-	new_value = "";
-	expected = ep1;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		new_value = "";
+		expected = ep1;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, nullptr,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
-    }
+		EXPECT_EQ(new_value, expected);
+	}
 }
 
 TEST(FullMergerTest, NoneEmptyExistingTest) {
@@ -313,96 +312,96 @@ TEST(FullMergerTest, NoneEmptyExistingTest) {
     // prepare existing_value
     key = "";
     std::string field1("a3b4"), value1("112"),
-	field2("a3b3"), value2("-11159");
-    std::string ep1 = encode_hash_value(field1, value1),
-	ep2 = encode_hash_value(field2, value2);
+		field2("a3b3"), value2("-11159");
+    std::string ep1 = gEncoder->encode_value(field1, value1),
+		ep2 = gEncoder->encode_value(field2, value2);
 
     rocksdb::Slice existing_operand;
     std::vector<rocksdb::Slice> operands;
     ChessMergeOperator chessMerger;
     {
-	// one insert
-	operands.clear();
-	new_value = "";
-	std::string existing_value = ep1 + ";" + ep2;
-	rocksdb::Slice slice(existing_value);
+		// one insert
+		operands.clear();
+		new_value = "";
+		std::string existing_value = ep1 + ";" + ep2;
+		rocksdb::Slice slice(existing_value);
 	
-	field = "b3b4"; value = "112";
-	std::string temp = encode_hash_value(field, value);
-	operands.push_back(temp);
+		field = "b3b4"; value = "112";
+		std::string temp = gEncoder->encode_value(field, value);
+		operands.push_back(temp);
 
-	expected = temp + ";" + existing_value;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
-						    operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		expected = temp + ";" + existing_value;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one update
-	operands.clear();
-	new_value = "";
-	std::string existing_value = ep1 + ";" + ep2;
-	rocksdb::Slice slice(existing_value);
+		// one update
+		operands.clear();
+		new_value = "";
+		std::string existing_value = ep1 + ";" + ep2;
+		rocksdb::Slice slice(existing_value);
 
-	value = "whatever";
-	std::string temp = encode_hash_value(field1, value);
-	operands.push_back(temp);
+		value = "whatever";
+		std::string temp = gEncoder->encode_value(field1, value);
+		operands.push_back(temp);
 
-	expected = temp + ";" + ep2;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
-							     operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		expected = temp + ";" + ep2;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 	
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one delete
-	operands.clear();
-	new_value = "";
-	std::string existing_value = ep1 + ";" + ep2;
-	rocksdb::Slice slice(existing_value);
+		// one delete
+		operands.clear();
+		new_value = "";
+		std::string existing_value = ep1 + ";" + ep2;
+		rocksdb::Slice slice(existing_value);
 
-	value = "_deleted_";
-	std::string temp = encode_hash_value(field1, value);
-	operands.push_back(temp);
+		value = kDelTag;
+		std::string temp = gEncoder->encode_value(field1, value);
+		operands.push_back(temp);
 
-	expected = ep2;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
-							     operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		expected = ep2;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one insert, one update, one delete
-	operands.clear();
-	new_value = "";
-	std::string existing_value = ep1 + ";" + ep2;
-	rocksdb::Slice slice(existing_value);
+		// one insert, one update, one delete
+		operands.clear();
+		new_value = "";
+		std::string existing_value = ep1 + ";" + ep2;
+		rocksdb::Slice slice(existing_value);
 
-	field = "cdeft"; value = "112";
-	std::string itemp = encode_hash_value(field, value);
-	operands.push_back(itemp);
+		field = "c7d0"; value = "112";
+		std::string itemp = gEncoder->encode_value(field, value);
+		operands.push_back(itemp);
 
-	value = "_deleted_";
-	std::string dtemp = encode_hash_value(field2, value);
-	operands.push_back(dtemp);
+		value = kDelTag;
+		std::string dtemp = gEncoder->encode_value(field2, value);
+		operands.push_back(dtemp);
 
-	value = "sowhat";
-	std::string utemp = encode_hash_value(field1, value);
-	operands.push_back(utemp);
+		value = "211";
+		std::string utemp = gEncoder->encode_value(field1, value);
+		operands.push_back(utemp);
 
-	expected = utemp + ";" + itemp;
-	rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
-							     operands, nullptr);
-	rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
-	chessMerger.FullMergeV2(merge_in, &merge_out);
+		expected = utemp + ";" + itemp;
+		rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
+															 operands, nullptr);
+		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
 }
 
@@ -412,271 +411,293 @@ TEST(PartialMergerTest, BaseTest) {
     
     ChessMergeOperator chessMerger;
     {
-	// two inserts
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
+		// two inserts
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	new_value = "";
-	expected = ep2 + ";" + ep1;
-	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+		new_value = "";
+		expected = ep2 + ";" + ep1;
+		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one insert, one update
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
+		// one insert, one update
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
 
-	field = "a3b4"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b4"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	new_value = "";
-	expected = ep2;
-	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+		new_value = "";
+		expected = ep2;
+		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one insert, one delete
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
+		// one insert, one delete
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
 
-	field = "a3b4"; value = "_deleted_";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b4"; value = kDelTag;
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	expected = ""; new_value = "";
-	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+		expected = ""; new_value = "";
+		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// one delete, one insert
-	field = value = expected = "";
-	field = "a3b4"; value = "_deleted_";
-	std::string ep1 = encode_hash_value(field, value);
+		// one delete, one insert
+		field = value = expected = "";
+		field = "a3b4"; value = kDelTag;
+		std::string ep1 = gEncoder->encode_value(field, value);
 	
-	field = "a3b4"; value = "112";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b4"; value = "112";
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	new_value = "";
-	expected = ep2;
-	chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
+		new_value = "";
+		expected = ep2;
+		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// two inserts, one update
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
+		// two inserts, one update
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	field = "a3b4"; value = "11445";
-	std::string ep3 = encode_hash_value(field, value);
+		field = "a3b4"; value = "11445";
+		std::string ep3 = gEncoder->encode_value(field, value);
 
-	new_value = "";
-	expected = ep3 + ";" + ep2;
-	chessMerger.PartialMerge(key, ep1, ep3 + ";" + ep2, &new_value, nullptr);
+		new_value = "";
+		expected = ep3 + ";" + ep2;
+		chessMerger.PartialMerge(key, ep1, ep3 + ";" + ep2, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
     {
-	// two inserts, one delete
-	field = "a3b4"; value = "112";
-	std::string ep1 = encode_hash_value(field, value);
+		// two inserts, one delete
+		field = "a3b4"; value = "112";
+		std::string ep1 = gEncoder->encode_value(field, value);
 
-	field = "a3b3"; value = "-11159";
-	std::string ep2 = encode_hash_value(field, value);
+		field = "a3b3"; value = "-11159";
+		std::string ep2 = gEncoder->encode_value(field, value);
 
-	field = "a3b3"; value = "_deleted_";
-	std::string ep3 = encode_hash_value(field, value);
+		field = "a3b3"; value = kDelTag;
+		std::string ep3 = gEncoder->encode_value(field, value);
 
-	new_value = "";
-	expected = ep1;
-	chessMerger.PartialMerge(key, ep1 + ";" + ep2, ep3, &new_value, nullptr);
+		new_value = "";
+		expected = ep1;
+		chessMerger.PartialMerge(key, ep1 + ";" + ep2, ep3, &new_value, nullptr);
 
-	EXPECT_EQ(new_value, expected);
+		EXPECT_EQ(new_value, expected);
     }
+}
+
+
+TEST(ValueEncodeTest, BaseTest) {
+	ChessHashEncoder encoder;
+	std::string ifield, ivalue;
+	{
+		ifield = "e3h5"; ivalue = "12345";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string ofield, ovalue;
+		encoder.decode_value(result, &ofield, &ovalue);
+		ASSERT_EQ(ifield, ofield);
+		ASSERT_EQ(ivalue, ovalue);
+	}
+	{
+		ifield = "a0h9"; ivalue = "-29999";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string ofield, ovalue;
+		encoder.decode_value(result, &ofield, &ovalue);
+		ASSERT_EQ(ifield, ofield);
+		ASSERT_EQ(ivalue, ovalue);
+	}
 }
 
 
 /*
 //TEST(ValueCntTest, BaseTest) {
 void foo0() {
-    std::string prev_value, key, field, value;
-    std::string output, expected;
-    {
-	// from empty set
-	prev_value = key = field = value = output = expected = "";
-	int cnt = get_hash_value_count(key);
-	ASSERT_EQ(cnt, 0);
-    }
+std::string prev_value, key, field, value;
+std::string output, expected;
+{
+// from empty set
+prev_value = key = field = value = output = expected = "";
+int cnt = get_hash_value_count(key);
+ASSERT_EQ(cnt, 0);
+}
     
-    {
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
-	int cnt = get_hash_value_count(output);
-	ASSERT_EQ(cnt, 1);
+{
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
+int cnt = get_hash_value_count(output);
+ASSERT_EQ(cnt, 1);
 	
-	prev_value = output; field = "a3b3"; value = "-11159";
-	expected.push_back(';');
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "a3b3"; value = "-11159";
+expected.push_back(';');
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	EXPECT_EQ(expected, output);
-	cnt = get_hash_value_count(output);
-	ASSERT_EQ(cnt, 2);
-    }
+EXPECT_EQ(expected, output);
+cnt = get_hash_value_count(output);
+ASSERT_EQ(cnt, 2);
+}
 }
 
 //TEST(InsertUpdateTest, BaseTest) {
 void foo1() {
-    std::string prev_value, field, value;
-    std::string output, expected;
-    {
-	// from empty value
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	int ret = insert_update_hash_value(prev_value, field, value, &output);
+std::string prev_value, field, value;
+std::string output, expected;
+{
+// from empty value
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+int ret = insert_update_hash_value(prev_value, field, value, &output);
 
-	EXPECT_NE("a3b4:112", output);
-	EXPECT_EQ(expected, output);
-    }
-    {  
-	// insert
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+EXPECT_NE("a3b4:112", output);
+EXPECT_EQ(expected, output);
+}
+{  
+// insert
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "a3b3"; value = "-11159";
-	expected.push_back(';');
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "a3b3"; value = "-11159";
+expected.push_back(';');
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	EXPECT_EQ(expected, output);
-    }
-    {
-	// update 1
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	insert_update_hash_value(prev_value, field, value, &output);
+EXPECT_EQ(expected, output);
+}
+{
+// update 1
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+insert_update_hash_value(prev_value, field, value, &output);
 	
-	prev_value = output; field = "a3b4"; value = "-11159";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "a3b4"; value = "-11159";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	EXPECT_EQ(expected, output);
-    }
-    {  
-	// update 2
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+EXPECT_EQ(expected, output);
+}
+{  
+// update 2
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "a3b3"; value = "-11159";
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "a3b3"; value = "-11159";
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "a3b3"; value = "1724";
-	expected.push_back(';');
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
+prev_value = output; field = "a3b3"; value = "1724";
+expected.push_back(';');
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
 
-	int ret = insert_update_hash_value(prev_value, field, value, &output);
-	EXPECT_EQ(expected, output);
-    }
+int ret = insert_update_hash_value(prev_value, field, value, &output);
+EXPECT_EQ(expected, output);
+}
 }
 
 //TEST(RemoveTest, BaseTest) {
 void foo2() {
-    std::string prev_value, field, value;
-    std::string output, expected;
-    {
-	// remove none-exist 1
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected = "";
-	int ret = remove_hash_value(prev_value, field, &output);
+std::string prev_value, field, value;
+std::string output, expected;
+{
+// remove none-exist 1
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected = "";
+int ret = remove_hash_value(prev_value, field, &output);
 
-	ASSERT_EQ(0, ret);
-	EXPECT_EQ(expected, output);
-    }
-    {
-	// remove none-exist 2
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+ASSERT_EQ(0, ret);
+EXPECT_EQ(expected, output);
+}
+{
+// remove none-exist 2
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "sdfsafds";
-	int ret = remove_hash_value(prev_value, field, &output);
+prev_value = output; field = "sdfsafds";
+int ret = remove_hash_value(prev_value, field, &output);
 
-	ASSERT_EQ(0, ret);
-	EXPECT_EQ(expected, output);
-    }
-    {
-	// remove exist 1
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected = "";
-	insert_update_hash_value(prev_value, field, value, &output);
+ASSERT_EQ(0, ret);
+EXPECT_EQ(expected, output);
+}
+{
+// remove exist 1
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected = "";
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output;
-	int ret = remove_hash_value(prev_value, field, &output);
+prev_value = output;
+int ret = remove_hash_value(prev_value, field, &output);
 
-	ASSERT_EQ(1, ret);
-	EXPECT_EQ(expected, output);
-    }
-    {
-	// remove exist 2: remove tail
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+ASSERT_EQ(1, ret);
+EXPECT_EQ(expected, output);
+}
+{
+// remove exist 2: remove tail
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "u3y4"; value = "-112";
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "u3y4"; value = "-112";
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output;
-	int ret = remove_hash_value(prev_value, field, &output);
+prev_value = output;
+int ret = remove_hash_value(prev_value, field, &output);
 
 	
-	EXPECT_EQ(expected, output);
-    }
-    {
-	// remove exist 3: remove head
-	prev_value = field = value = output = expected = "";
-	prev_value = ""; field = "a3b4"; value = "112";
-	insert_update_hash_value(prev_value, field, value, &output);
+EXPECT_EQ(expected, output);
+}
+{
+// remove exist 3: remove head
+prev_value = field = value = output = expected = "";
+prev_value = ""; field = "a3b4"; value = "112";
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "u3y4"; value = "-112";
-	expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-	expected.push_back((char)value.length()); expected += value;
-	insert_update_hash_value(prev_value, field, value, &output);
+prev_value = output; field = "u3y4"; value = "-112";
+expected.push_back((char)field.length()); expected += field; expected.push_back(':');
+expected.push_back((char)value.length()); expected += value;
+insert_update_hash_value(prev_value, field, value, &output);
 
-	prev_value = output; field = "a3b4";
-	int ret = remove_hash_value(prev_value, field, &output);
+prev_value = output; field = "a3b4";
+int ret = remove_hash_value(prev_value, field, &output);
 
-	ASSERT_EQ(1, ret);
-	EXPECT_EQ(expected, output);
-    }
+ASSERT_EQ(1, ret);
+EXPECT_EQ(expected, output);
+}
 }
 */
     
