@@ -287,6 +287,10 @@ static int hset_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, const 
     // use 'hkey' to log, not 'key'
     std::string hkey = gEncoder->encode_key(key);
     std::string new_value = gEncoder->encode_value(field, val);
+	if (new_value.empty()) {
+		log_error("invalid field/value %s, %s", field.data(), val.data());
+		return -1;
+	}
     ssdb->_binlogs->Merge(hkey, slice(new_value));
     ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
 
@@ -324,6 +328,10 @@ static int hdel_one(SSDBImpl *ssdb, const Bytes &key, const Bytes &field, char l
     std::string hkey = gEncoder->encode_key(key);
     //std::string new_value = gEncoder->encode_value(field, "_deleted_");
 	std::string new_value = gEncoder->encode_value(field, kDelTag);
+	if (new_value.empty()) {
+		log_error("invalid field %s", field.data());
+		return -1;
+	}
     ssdb->_binlogs->Merge(hkey, slice(new_value));
     ssdb->_binlogs->add_log(log_type, BinlogCommand::HSET, hkey);
 

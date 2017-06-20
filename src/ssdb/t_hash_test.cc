@@ -522,6 +522,43 @@ TEST(ValueEncodeTest, BaseTest) {
 		ASSERT_EQ(ifield, ofield);
 		ASSERT_EQ(ivalue, ovalue);
 	}
+	{
+		// del item
+		ifield = "a7b8"; ivalue = kDelTag;
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string ofield, ovalue;
+		encoder.decode_value(result, &ofield, &ovalue);
+		ASSERT_EQ(ifield, ofield);
+		ASSERT_EQ(ivalue, ovalue);
+	}
+	{
+		// invalid field
+		ifield = "b8j9"; ivalue = "0";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string expected = "";
+		ASSERT_EQ(result, expected);
+	}
+	{
+		// invalid field 2
+		ifield = "b8c99"; ivalue = "0";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string expected = "";
+		ASSERT_EQ(result, expected);
+	}
+	{
+		// invalid field 3
+		ifield = "8c9d"; ivalue = "0";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string expected = "";
+		ASSERT_EQ(result, expected);
+	}
+	{
+		// invalid value
+		ifield = "c9d0"; ivalue = "-30100";
+		std::string result = encoder.encode_value(ifield, ivalue);
+		std::string expected = "";
+		ASSERT_EQ(result, expected);
+	}
 }
 
 

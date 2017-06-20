@@ -3,8 +3,8 @@
 #define HASH_ENCODER_
 
 #include <string>
-
 #include "../util/bytes.h"
+#include "const.h"
 
 class HashEncoder {
  public:

@@ -10,8 +10,9 @@ found in the LICENSE file.
 #include <string>
 #include <pthread.h>
 #include <vector>
-#include "ssdb/ssdb_impl.h"
 #include "ssdb/binlog.h"
+#include "ssdb/hash_encoder.h"
+#include "ssdb/ssdb_impl.h"
 #include "net/link.h"
 
 class Slave{
@@ -31,6 +32,8 @@ private:
 	bool is_mirror;
 	char log_type;
 
+	HashEncoder* _encoder;
+	
 	static const int DISCONNECTED = 0;
 	static const int INIT = 1;
 	static const int COPY = 2;
