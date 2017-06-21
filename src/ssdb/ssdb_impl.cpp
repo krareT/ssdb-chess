@@ -22,13 +22,17 @@ SSDBImpl::SSDBImpl(){
 	_encoder = new ChessHashEncoder;
 }
 
-SSDBImpl::~SSDBImpl(){
-    if(_binlogs){
+SSDBImpl::~SSDBImpl() {
+    if (_binlogs) {
 		delete _binlogs;
     }
-    if(ldb){
+    if (ldb) {
+		for (int i = 0; i < _cfHandles.size(); i++) {
+			ldb->DestroyColumnFamilyHandle(_cfHandles[i]);
+		}
 		delete ldb;
     }
+	
     /*if(options.block_cache){
       delete options.block_cache;
       }
