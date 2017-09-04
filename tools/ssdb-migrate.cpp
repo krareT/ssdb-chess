@@ -99,26 +99,27 @@ void parse_args(AppArgs *args, int argc, char **argv){
 void send_req(int tid) {
     std::vector<std::string> items;
     while (true) {
-	Data data = dqueue.pop();
-	if (!data.key.empty()) {
-	    items.push_back(data.key);
-	    items.push_back(data.field);
-	    items.push_back(data.value);
-	}
-	if (data.key.empty() || items.size() >= kBatchSize) { // end signal
-	    if (items.empty()) {
-		break;
-	    }
-	    ssdb::Status s = clients[tid]->migrate_hset(items);
-	    if (!s.ok()) {
-		log_error("dst hset error! %s", s.code().c_str());
-		exit(1);
-	    }
-	    if (data.key.empty()) {
-		break;
-	    }
-	    items.clear();
-	}
+		Data data = dqueue.pop();
+		if (!data.key.empty()) {
+			items.push_back(data.key);
+			items.push_back(data.field);
+			items.push_back(data.value);
+		}
+		if (data.key.empty() || items.size() >= kBatchSize) { // end signal
+			if (items.empty()) {
+				break;
+			}
+			ssdb::Status s = clients[tid]->migrate_hset(items);
+			if (!s.ok()) {
+				log_error("dst hset error! %s", s.code().c_str());
+				printf("dst hset error! %s", s.code().c_str());
+				exit(1);
+			}
+			if (data.key.empty()) {
+				break;
+			}
+			items.clear();
+		}
     }
 }
 
