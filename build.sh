@@ -147,8 +147,8 @@ case "$TARGET_OS" in
 	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
 	;;
 	*)
-		echo "CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\"" >> build_config.mk
-		echo "CFLAGS += -I \"$JEMALLOC_PATH/include\"" >> build_config.mk
+		#echo "CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\"" >> build_config.mk
+		#echo "CFLAGS += -I \"$JEMALLOC_PATH/include\"" >> build_config.mk
 	;;
 esac
 

@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
 		    data.field = std::string(hkey.data() + index + 1, hkey.size() - index - 1);
 		    data.value = std::string(val.data(), val.size());
 		    
-		    if (dump_count > 0 && dump_count % 100 == 0) { // sample keys
+		    if (dump_count > 0 && dump_count % 1000 == 0) { // sample keys
 		    	printf("key: %s\n", str_escape(data.key.data(), data.key.size()).c_str());
 		    }	
 		    dqueue.push(data);
