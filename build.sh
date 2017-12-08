@@ -81,7 +81,7 @@ if [ ! -f Makefile ]; then
 fi
 cd "$DIR"
 
-
+<<EOF
 case "$TARGET_OS" in
 	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
 		echo "not using jemalloc on $TARGET_OS"
@@ -101,6 +101,7 @@ case "$TARGET_OS" in
 		cd "$DIR"
 	;;
 esac
+EOF
 
 
 rm -f src/version.h
@@ -118,7 +119,7 @@ case "$TARGET_OS" in
 	*)
 		echo "#ifndef IOS" >> src/version.h
 		echo "#include <stdlib.h>" >> src/version.h
-		echo "#include <jemalloc/jemalloc.h>" >> src/version.h
+		#echo "#include <jemalloc/jemalloc.h>" >> src/version.h
 		echo "#endif" >> src/version.h
 	;;
 esac
@@ -128,7 +129,7 @@ echo CC=$CC >> build_config.mk
 echo CXX=$CXX $CXX_FLAGS >> build_config.mk
 echo "MAKE=$MAKE" >> build_config.mk
 echo "LEVELDB_PATH=$LEVELDB_PATH" >> build_config.mk
-echo "JEMALLOC_PATH=$JEMALLOC_PATH" >> build_config.mk
+#echo "JEMALLOC_PATH=$JEMALLOC_PATH" >> build_config.mk
 echo "SNAPPY_PATH=$SNAPPY_PATH" >> build_config.mk
 
 echo "CFLAGS=" >> build_config.mk

@@ -5,5 +5,4 @@
 #endif
 #ifndef IOS
 #include <stdlib.h>
-#include <jemalloc/jemalloc.h>
 #endif
