@@ -45,12 +45,14 @@ SSDB* SSDB::open(const Options &opt, const std::string &dir){
     SSDBImpl *ssdb = new SSDBImpl();
     ssdb->options.create_if_missing = true;
     ssdb->options.merge_operator = std::make_shared<ChessMergeOperator>();
+    /*
     ssdb->options.IncreaseParallelism();
     ssdb->options.OptimizeLevelStyleCompaction();
     ssdb->options.max_background_compactions = 8;
     ssdb->options.max_background_flushes = 8;
     ssdb->options.env->SetBackgroundThreads(8, rocksdb::Env::LOW);
     ssdb->options.env->SetBackgroundThreads(8, rocksdb::Env::HIGH);
+    */
     /*
       ssdb->options.max_open_files = opt.max_open_files;
       ssdb->options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
