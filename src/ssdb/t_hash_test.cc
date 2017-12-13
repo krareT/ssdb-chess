@@ -18,126 +18,133 @@ using std::cout;
 using std::endl;
 
 static HashEncoder* gEncoder = new ChessHashEncoder;
-static const std::string kDBPath = "./testdb";
+const std::string kDBPath = "./testdb";
 
-// The fixture for testing class Foo.
-class THashTest : public ::testing::Test {
-protected:
-    virtual void SetUp() {
-		// Code here will be called immediately after the constructor (right
-		// before each test).
-		Options options;
+rocksdb::DB* _db;
+SSDB *_ssdb;
 
-		// open DB
-		_ssdb = SSDB::open(Options(), kDBPath);
-		//rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &_db);
-		//assert(s.ok());
-    }
+void SetUp(const std::string& msg) {
+    Options options;
+    _ssdb = SSDB::open(options, kDBPath);
+    //rocksdb::Status s = rocksdb::DB::Open(options, kDBPath, &_db);
+    //assert(s.ok());
+    std::cout << msg;
+}
 
-    virtual void TearDown() {
-		// Code here will be called immediately after each test (right
-		// before the destructor).
-		delete _ssdb;
+void TearDown(const std::string& msg) {
+    std::cout << msg;
+    delete _ssdb;
+    std::string cmd = "rm -rf " + kDBPath + "/*";
+    system (cmd.c_str());
+}
 
-		std::string cmd = "rm -rf " + kDBPath + "/*";
-		system (cmd.c_str());
-    }
+void THashTest_SetAndCnt() {
+    SetUp("==== THashTest_SetAndCnt start\n");
 
-    // Objects declared here can be used by all tests in the test case for ....
-protected:
-    rocksdb::DB* _db;
-    SSDB *_ssdb;
-};
-
-TEST_F(THashTest, SetAndCnt) {
     std::string key1 = "key1", field1 = "e7b8";
     int cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(0, cnt);
+    assert(0 == cnt);
 	
     int ret = _ssdb->hset(key1, field1, "04", BinlogCommand::HSET);
     ASSERT_NE(-1, ret);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(1, cnt);
+    assert(1 == cnt);
 
     std::string field2 = "b8e9";
     ret = _ssdb->hset(key1, field2, "14", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(2, cnt);
+    assert(2 == cnt);
 
     // update field1 & field2
     ret = _ssdb->hset(key1, field1, "-4", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(2, cnt);
+    assert(2 == cnt);
 
     ret = _ssdb->hset(key1, field2, "-14", BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(2, cnt);
+    assert(2 == cnt);
+
+    TearDown("\tdone\n");
 }
 
-TEST_F(THashTest, SetAndGet) {
+void THashTest_SetAndGet() {
+    SetUp("==== THashTest_SetAndGet start\n");
+
     std::string key1 = "key1", field1 = "e7b8", value1 = "30000";
     int cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(0, cnt);
+    assert(0 == cnt);
 
-    int ret = _ssdb->hset(key1, field1, value1, BinlogCommand::HSET);
+    _ssdb->hset(key1, field1, value1, BinlogCommand::HSET);
  
     std::string result;
     _ssdb->hget(key1, field1, &result);
-    EXPECT_EQ(value1, result);
+    assert(value1 == result);
 
     std::string field2 = "a0b0", value2 = "-30000";
-    ret = _ssdb->hset(key1, field2, value2, BinlogCommand::HSET);
+    _ssdb->hset(key1, field2, value2, BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(2, cnt);
+    assert(2 == cnt);
 
     result = "";
     _ssdb->hget(key1, field2, &result);
-    EXPECT_EQ(value2, result);
+    assert(value2 == result);
+    
+    TearDown("\tdone\n");
 }
 
-TEST_F(THashTest, DelAndCnt) {
-    std::string key1 = "key1", field1 = "a9i9", field2 = "b2c3";
-    int ret = _ssdb->hset(key1, field1, "0", BinlogCommand::HSET);
-    int cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(1, cnt);
+void THashTest_DelAndCnt() {
+    SetUp("==== THashTest_DelAndCnt start\n");
 
-    ret = _ssdb->hdel(key1, field1, BinlogCommand::HSET);
+    std::string key1 = "key1", field1 = "a9i9", field2 = "b2c3";
+    _ssdb->hset(key1, field1, "0", BinlogCommand::HSET);
+    int cnt = _ssdb->hsize(key1);
+    assert(1 == cnt);
+
+    _ssdb->hdel(key1, field1, BinlogCommand::HSET);
     std::string val;
-    ret = _ssdb->hget(key1, &val);
+    _ssdb->hget(key1, &val);
 	
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(0, cnt);
+    assert(0 == cnt);
 
     // add 2 fields, remove 1st one
     _ssdb->hset(key1, field1, "1414", BinlogCommand::HSET);
     _ssdb->hset(key1, field2, "4141", BinlogCommand::HSET);
-    ret = _ssdb->hdel(key1, field1, BinlogCommand::HSET);
+    _ssdb->hdel(key1, field1, BinlogCommand::HSET);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(1, cnt);
+    assert(1 == cnt);
 
     _ssdb->hclear(key1);
     cnt = _ssdb->hsize(key1);
-    ASSERT_EQ(0, cnt);
+    assert(0 == cnt);
+
+    TearDown("\tdone\n");
 }
 
 
-TEST_F(THashTest, ListKeys) {
+void THashTest_ListKeys() {
+    SetUp("==== THashTest_ListKeys start\n");
+
     std::string key1 = "key1", field1 = "a7b4";
     std::string key2 = "key2";
     std::vector<std::string> names;
     _ssdb->hlist(key1, key2, 100, &names);
-    ASSERT_EQ(0, names.size());
+    assert(0 == names.size());
     
     _ssdb->hset(key1, field1, "-2134", BinlogCommand::HSET);
     _ssdb->hset(key2, field1, "29999", BinlogCommand::HSET);
     
     _ssdb->hlist(key1, key2, 100, &names);
-    ASSERT_EQ(2, names.size());
-    ASSERT_TRUE(names[0] == "key1");
-    ASSERT_TRUE(names[1] == "key2");
+    assert(2 == names.size());
+    assert(names[0] == "key1");
+    assert(names[1] == "key2");
+
+    TearDown("\tdone\n");
 }
 
-TEST_F(THashTest, Scan) {
+void THashTest_Scan() {
+    SetUp("==== THashTest_Scan\n");
+
     std::string key1 = "key1",
 		field1 = "f9h7", field2 = "c4d4",
 		value1 = "-900", value2 = "900";
@@ -151,18 +158,22 @@ TEST_F(THashTest, Scan) {
 		arr.push_back(std::make_pair(iter->_field, iter->_value));
     }
 
-    ASSERT_EQ(2, arr.size());
-    ASSERT_TRUE(arr[0].first == field2);
-    ASSERT_TRUE(arr[0].second == value2);
-    ASSERT_TRUE(arr[1].first == field1);
-    ASSERT_TRUE(arr[1].second == value1);
+    assert(2 == arr.size());
+    assert(arr[0].first == field2);
+    assert(arr[0].second == value2);
+    assert(arr[1].first == field1);
+    assert(arr[1].second == value1);
 
     // empty
     iter = _ssdb->hscan("not exist", "", "", 100);
-    ASSERT_FALSE(iter->next());
+    assert(iter->next() == false);
+
+    TearDown("\tdone\n");
 }
 
-TEST(FullMergerTest, EmptyExistingTest) {
+void FullMergerTest_EmptyExistingTest() {
+    SetUp("==== FullMergerTest_EmptyExistingTest\n");
+
     std::string key, field, value;
     std::string new_value, result, expected;
     
@@ -189,7 +200,7 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one insert, one update
@@ -210,7 +221,7 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one insert, one delete
@@ -230,7 +241,7 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one delete, one insert
@@ -251,7 +262,7 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// two inserts, one update
@@ -276,7 +287,7 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// two inserts, one delete
@@ -301,11 +312,15 @@ TEST(FullMergerTest, EmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
 	}
+
+    TearDown("\tdone\n");
 }
 
-TEST(FullMergerTest, NoneEmptyExistingTest) {
+void FullMergerTest_NoneEmptyExistingTest() {
+    SetUp("==== FullMergerTest_NoneEmptyExistingTest start\n");
+
     std::string key, field, value;
     std::string new_value, result, expected;
 
@@ -336,7 +351,7 @@ TEST(FullMergerTest, NoneEmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one update
@@ -355,7 +370,7 @@ TEST(FullMergerTest, NoneEmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 	
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one delete
@@ -374,7 +389,7 @@ TEST(FullMergerTest, NoneEmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one insert, one update, one delete
@@ -401,11 +416,15 @@ TEST(FullMergerTest, NoneEmptyExistingTest) {
 		rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
 		chessMerger.FullMergeV2(merge_in, &merge_out);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
+
+    TearDown("\tdone\n");
 }
 
-TEST(PartialMergerTest, BaseTest) {
+void PartialMergerTest_BaseTest() {
+    SetUp("==== PartialMergerTest_BaseTest start\n");
+
     std::string key, field, value;
     std::string new_value, result, expected;
     
@@ -422,7 +441,7 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ep2 + ";" + ep1;
 		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one insert, one update
@@ -436,7 +455,7 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ep2;
 		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one insert, one delete
@@ -449,7 +468,7 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ""; new_value = "";
 		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// one delete, one insert
@@ -464,7 +483,7 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ep2;
 		chessMerger.PartialMerge(key, ep1, ep2, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// two inserts, one update
@@ -481,7 +500,7 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ep3 + ";" + ep2;
 		chessMerger.PartialMerge(key, ep1, ep3 + ";" + ep2, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
     {
 		// two inserts, one delete
@@ -498,12 +517,16 @@ TEST(PartialMergerTest, BaseTest) {
 		expected = ep1;
 		chessMerger.PartialMerge(key, ep1 + ";" + ep2, ep3, &new_value, nullptr);
 
-		EXPECT_EQ(new_value, expected);
+		assert(new_value == expected);
     }
+
+    TearDown("\tdone\n");
 }
 
 
-TEST(ValueEncodeTest, BaseTest) {
+void ValueEncodeTest_BaseTest() {
+    SetUp("==== ValueEncodeTest_BaseTest start\n");
+
 	ChessHashEncoder encoder;
 	std::string ifield, ivalue;
 	{
@@ -511,16 +534,16 @@ TEST(ValueEncodeTest, BaseTest) {
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string ofield, ovalue;
 		encoder.decode_value(result, &ofield, &ovalue);
-		ASSERT_EQ(ifield, ofield);
-		ASSERT_EQ(ivalue, ovalue);
+		assert(ifield == ofield);
+		assert(ivalue == ovalue);
 	}
 	{
 		ifield = "a0h9"; ivalue = "-29999";
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string ofield, ovalue;
 		encoder.decode_value(result, &ofield, &ovalue);
-		ASSERT_EQ(ifield, ofield);
-		ASSERT_EQ(ivalue, ovalue);
+		assert(ifield == ofield);
+		assert(ivalue == ovalue);
 	}
 	{
 		// del item
@@ -528,40 +551,54 @@ TEST(ValueEncodeTest, BaseTest) {
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string ofield, ovalue;
 		encoder.decode_value(result, &ofield, &ovalue);
-		ASSERT_EQ(ifield, ofield);
-		ASSERT_EQ(ivalue, ovalue);
+		assert(ifield == ofield);
+		assert(ivalue == ovalue);
 	}
 	{
 		// invalid field
 		ifield = "b8j9"; ivalue = "0";
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string expected = "";
-		ASSERT_EQ(result, expected);
+		assert(result == expected);
 	}
 	{
 		// invalid field 2
 		ifield = "b8c99"; ivalue = "0";
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string expected = "";
-		ASSERT_EQ(result, expected);
+		assert(result == expected);
 	}
 	{
 		// invalid field 3
 		ifield = "8c9d"; ivalue = "0";
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string expected = "";
-		ASSERT_EQ(result, expected);
+		assert(result == expected);
 	}
 	{
 		// invalid value
 		ifield = "c9d0"; ivalue = "-30100";
 		std::string result = encoder.encode_value(ifield, ivalue);
 		std::string expected = "";
-		ASSERT_EQ(result, expected);
+		assert(result == expected);
 	}
+
+    TearDown("\tdone\n");
 }
 
-
+int main() {
+    printf("EXAGGERATE\n");
+    THashTest_SetAndCnt();
+    THashTest_SetAndGet();
+    THashTest_DelAndCnt();
+    THashTest_ListKeys();
+    THashTest_Scan();
+    FullMergerTest_EmptyExistingTest();
+    FullMergerTest_NoneEmptyExistingTest();
+    PartialMergerTest_BaseTest();
+    ValueEncodeTest_BaseTest();
+    return 0;
+}
 /*
 //TEST(ValueCntTest, BaseTest) {
 void foo0() {
@@ -738,9 +775,9 @@ EXPECT_EQ(expected, output);
 }
 */
     
-int main(int argc, char** argv) {
+/*int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
-}
+    }*/
 
 
