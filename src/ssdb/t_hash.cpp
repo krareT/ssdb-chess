@@ -197,7 +197,7 @@ HIterator* SSDBImpl::hscan(const Bytes &key, const Bytes &start, const Bytes &en
 	  return new HIterator(this->iterator(key_start, key_end, limit), name);
     */
     std::string key_start = gEncoder->encode_key(key);
-    return new HIterator(this->iterator(key_start, "", limit), key);
+    return new HIterator(this->iterator(key_start, "", limit), key, gEncoder);
 }
 
 // TBD(kg): make sure enum all hset values is provided

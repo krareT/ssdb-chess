@@ -121,9 +121,10 @@ bool KIterator::next(){
 /* HASH */
 // by employing 'key', iterator could only reply
 // all {fields, value} under one key
-HIterator::HIterator(Iterator *it, const Bytes &key) {
+HIterator::HIterator(Iterator *it, const Bytes &key, HashEncoder* encoder) {
     this->_it = it;
     this->_key.assign(key.data(), key.size());
+    this->_encoder = encoder;
     this->_return_val = true;
     this->_index = -1;
     this->_values.clear();
@@ -141,13 +142,13 @@ void HIterator::return_val(bool onoff){
 bool HIterator::next() {
     if (_index == -1) { // init first, mutex TBD
 		_index = 0;
-		HashEncoder* encoder = new ChessHashEncoder;
+		//HashEncoder* encoder = new ChessHashEncoder;
 		if (_it->next()) {
 			Bytes ks = _it->key();
 			std::string key;
 			if (ks.data()[0] != DataType::HASH ||
-				encoder->decode_key(ks, &key) == -1 ||
-				key != this->_key) {
+                _encoder->decode_key(ks, &key) == -1 ||
+                key != this->_key) {
 				_valid = false;
 				return _valid;
 			}

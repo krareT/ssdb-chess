@@ -16,6 +16,7 @@ namespace rocksdb{
     class Iterator;
 }
 
+class HashEncoder;
 class Iterator{
  public:
     enum Direction{
@@ -60,11 +61,12 @@ class HIterator{
     std::string _field;
     std::string _value;
 
-    HIterator(Iterator *it, const Bytes &key);
+    HIterator(Iterator *it, const Bytes &key, HashEncoder*);
     ~HIterator();
     void return_val(bool onoff);
     bool next();
  private:
+    HashEncoder *_encoder;
     Iterator *_it;
     bool _return_val;
     bool _valid;
