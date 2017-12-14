@@ -122,6 +122,7 @@ bool KIterator::next(){
 // by employing 'key', iterator could only reply
 // all {fields, value} under one key
 HIterator::HIterator(Iterator *it, const Bytes &key, HashEncoder* encoder) {
+    this->_valid = false;
     this->_it = it;
     this->_key.assign(key.data(), key.size());
     this->_encoder = encoder;

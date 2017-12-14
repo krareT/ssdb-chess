@@ -24,7 +24,10 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
 		_encoder = new ChessHashEncoder;
 	}
 	
-    virtual ~ChessMergeOperator() {}
+    virtual ~ChessMergeOperator() {
+        delete _encoder;
+    }
+
     // Gives the client a way to express the read -> modify -> write semantics
     // key:      (IN)    The key that's associated with this merge operation.
     //                   Client could multiplex the merge operator based on it
