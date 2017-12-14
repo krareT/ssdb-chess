@@ -9,6 +9,7 @@ found in the LICENSE file.
 #include <vector>
 #include "resp.h"
 #include "../util/bytes.h"
+#include "../util/strings.h"
 
 class Link;
 class NetworkServer;
@@ -65,6 +66,7 @@ struct ProcJob{
 		stime = 0;
 		time_wait = 0;
 		time_proc = 0;
+		req = NULL;
 	}
 	~ProcJob(){
 	}
@@ -121,10 +123,6 @@ public:
 		return proc_map.end();
 	}
 };
-
-
-
-#include "../util/strings.h"
 
 template<class T>
 static std::string serialize_req(T &req){
