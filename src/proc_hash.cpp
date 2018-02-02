@@ -128,10 +128,8 @@ int proc_multi_hget(NetworkServer *net, Link *link, const Request &req, Response
     SSDBServer *serv = (SSDBServer *)net->data;
 
     resp->push_back("ok");
-    Request::const_iterator it=req.begin() + 1;
-    const Bytes name = *it;
-    it ++;
-    for(; it!=req.end(); it+=1){
+    const Bytes name = req[1];
+    for(auto it = req.begin() + 2; it != req.end(); ++it){
 	const Bytes &key = *it;
 	std::string val;
 	int ret = serv->ssdb->hget(name, key, &val);

@@ -16,14 +16,14 @@ class Options
 	
     void load(const Config &conf);
 
-    size_t cache_size;
-    size_t max_open_files;
-    size_t write_buffer_size;
-    size_t block_size;
-    int compaction_speed;
+    size_t cache_size = 0;
+    size_t max_open_files = 0;
+    size_t write_buffer_size = 0;
+    size_t block_size = 0;
+    int compaction_speed = 0;
     std::string compression;
-    bool binlog;
-    size_t binlog_capacity;
+    bool binlog = 0;
+    size_t binlog_capacity = 0;
 };
 
 #endif

@@ -8,6 +8,7 @@
 
 class HashEncoder {
  public:
+    virtual ~HashEncoder() {}
     virtual std::string encode_key(const Bytes&) = 0;
     virtual int decode_key(const Bytes&, std::string*) = 0;
     virtual std::string encode_value(const Bytes& field, const Bytes& value) = 0;

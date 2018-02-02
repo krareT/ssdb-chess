@@ -1,6 +1,3 @@
-
-#include "gtest/gtest.h"
-
 #include "../include.h"
 #include "const.h"
 #include "ssdb.h"
@@ -46,7 +43,7 @@ void THashTest_SetAndCnt() {
     assert(0 == cnt);
 	
     int ret = _ssdb->hset(key1, field1, "04", BinlogCommand::HSET);
-    ASSERT_NE(-1, ret);
+    assert(-1 != ret);
     cnt = _ssdb->hsize(key1);
     assert(1 == cnt);
 
