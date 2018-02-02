@@ -5,7 +5,7 @@
 ulimit -n 8192
 
 #nohup env LD_PRELOAD=libterark-zip-rocksdb-r.so:librocksdb.so \
-nohup env LD_PRELOAD=libterark-zip-rocksdb-r.so \
+nohup env LD_PRELOAD=libterark-zip-rocksdb-r.so::librocksdb.so \
     TerarkUseDivSufSort=1 \
     TerarkZipTable_write_buffer_size=2G \
     TerarkZipTable_indexNestLevel=4 \
@@ -21,3 +21,5 @@ nohup env LD_PRELOAD=libterark-zip-rocksdb-r.so \
     TerarkZipTable_max_background_compactions=2 \
     TerarkZipTable_extendedConfigFile=/root/.terark_license \
     ./ssdb-server ./chess.conf &
+
+#    TerarkZipTable_extendedConfigFile=/root/.terark_license \

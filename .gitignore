@@ -3,3 +3,4 @@ GRTAGS
 GPATH
 .DS_Store
 *.o
+tools/key_sample.txt

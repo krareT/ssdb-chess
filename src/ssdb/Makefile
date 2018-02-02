@@ -32,7 +32,7 @@ ttl.o: ssdb.h ttl.h ttl.cpp
 	${CXX} ${CFLAGS} -c ttl.cpp
 
 test:
-	${CXX} -o t_hash_test t_hash_test.cc ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS} -lrocksdb -lgtest
+	${CXX} -g -o t_hash_test t_hash_test.cc ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS} -lrocksdb
 #	${CXX} -o test.out test.cpp ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS}
 
 clean:
