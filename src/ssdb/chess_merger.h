@@ -165,12 +165,12 @@ class ChessMergeOperator : public rocksdb::MergeOperator {
     new_value->clear();  new_value->reserve(len);
     len = 0;
     for (auto& item : arr) {
-      if (!isDeleted(item.first, item.second)) {
-	std::string val = _encoder->encode_value(item.first, item.second);
-	new_value->append(val.data(), val.size());
-	new_value->append(1, ';');
-	len += val.size() + 1;
-      }
+      //if (!isDeleted(item.first, item.second)) {
+      std::string val = _encoder->encode_value(item.first, item.second);
+      new_value->append(val.data(), val.size());
+      new_value->append(1, ';');
+      len += val.size() + 1;
+      //}
     }
     if (!new_value->empty()) {
       new_value->resize(len - 1); // skip the last ';'

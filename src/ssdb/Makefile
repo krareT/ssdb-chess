@@ -31,8 +31,9 @@ binlog.o: ssdb.h binlog.h binlog.cpp
 ttl.o: ssdb.h ttl.h ttl.cpp
 	${CXX} ${CFLAGS} -c ttl.cpp
 
+# no ${CFLAGS}, get rid of NDEBUG
 test:
-	${CXX} -g -o t_hash_test t_hash_test.cc ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS} -lrocksdb
+	${CXX} -g -o t_hash_test t_hash_test.cc ${OBJS} -D__STDC_FORMAT_MACROS -Wall -O2 -Wno-sign-compare -I "/newssd1/zzz/ssdb-chess/rocksdb/include" ${LIBS} ${CLIBS} -lrocksdb
 #	${CXX} -o test.out test.cpp ${OBJS} ${CFLAGS} ${LIBS} ${CLIBS}
 
 clean:
