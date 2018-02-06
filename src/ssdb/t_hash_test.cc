@@ -527,7 +527,7 @@ void THashTest_BugPartial() {
   std::string new_value, result, expected;
     
   ChessMergeOperator chessMerger;
-  // make sure partial remove will keep 'DEL'
+  // make sure partial merge will keep 'DEL'
   // a -> 1, b -> 2, del a
   field = "a3b4"; value = "112";
   std::string ep1 = gEncoder->encode_value(field, value);
@@ -545,6 +545,16 @@ void THashTest_BugPartial() {
 
   new_value = "";
   chessMerger.PartialMerge(key, ep1, inter, &new_value, nullptr);
+  assert(new_value == expected);
+
+  // now use full merge, 'DEL' will be skipped
+  rocksdb::Slice slice, existing_operand;
+  std::vector<rocksdb::Slice> operands = { new_value };
+  expected = ep2;
+  rocksdb::MergeOperator::MergeOperationInput merge_in(key, &slice,
+						       operands, nullptr);
+  rocksdb::MergeOperator::MergeOperationOutput merge_out(new_value, existing_operand);
+  chessMerger.FullMergeV2(merge_in, &merge_out);
   assert(new_value == expected);
 
   TearDown("\tdone\n");
@@ -627,185 +637,3 @@ int main() {
   THashTest_BugPartial();
   return 0;
 }
-/*
-//TEST(ValueCntTest, BaseTest) {
-void foo0() {
-std::string prev_value, key, field, value;
-std::string output, expected;
-{
-// from empty set
-prev_value = key = field = value = output = expected = "";
-int cnt = get_hash_value_count(key);
-ASSERT_EQ(cnt, 0);
-}
-    
-{
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-int cnt = get_hash_value_count(output);
-ASSERT_EQ(cnt, 1);
-	
-prev_value = output; field = "a3b3"; value = "-11159";
-expected.push_back(';');
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-EXPECT_EQ(expected, output);
-cnt = get_hash_value_count(output);
-ASSERT_EQ(cnt, 2);
-}
-}
-
-//TEST(InsertUpdateTest, BaseTest) {
-void foo1() {
-std::string prev_value, field, value;
-std::string output, expected;
-{
-// from empty value
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-int ret = insert_update_hash_value(prev_value, field, value, &output);
-
-EXPECT_NE("a3b4:112", output);
-EXPECT_EQ(expected, output);
-}
-{  
-// insert
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "a3b3"; value = "-11159";
-expected.push_back(';');
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-EXPECT_EQ(expected, output);
-}
-{
-// update 1
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-insert_update_hash_value(prev_value, field, value, &output);
-	
-prev_value = output; field = "a3b4"; value = "-11159";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-EXPECT_EQ(expected, output);
-}
-{  
-// update 2
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "a3b3"; value = "-11159";
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "a3b3"; value = "1724";
-expected.push_back(';');
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-
-int ret = insert_update_hash_value(prev_value, field, value, &output);
-EXPECT_EQ(expected, output);
-}
-}
-
-//TEST(RemoveTest, BaseTest) {
-void foo2() {
-std::string prev_value, field, value;
-std::string output, expected;
-{
-// remove none-exist 1
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected = "";
-int ret = remove_hash_value(prev_value, field, &output);
-
-ASSERT_EQ(0, ret);
-EXPECT_EQ(expected, output);
-}
-{
-// remove none-exist 2
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "sdfsafds";
-int ret = remove_hash_value(prev_value, field, &output);
-
-ASSERT_EQ(0, ret);
-EXPECT_EQ(expected, output);
-}
-{
-// remove exist 1
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected = "";
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output;
-int ret = remove_hash_value(prev_value, field, &output);
-
-ASSERT_EQ(1, ret);
-EXPECT_EQ(expected, output);
-}
-{
-// remove exist 2: remove tail
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "u3y4"; value = "-112";
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output;
-int ret = remove_hash_value(prev_value, field, &output);
-
-	
-EXPECT_EQ(expected, output);
-}
-{
-// remove exist 3: remove head
-prev_value = field = value = output = expected = "";
-prev_value = ""; field = "a3b4"; value = "112";
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "u3y4"; value = "-112";
-expected.push_back((char)field.length()); expected += field; expected.push_back(':');
-expected.push_back((char)value.length()); expected += value;
-insert_update_hash_value(prev_value, field, value, &output);
-
-prev_value = output; field = "a3b4";
-int ret = remove_hash_value(prev_value, field, &output);
-
-ASSERT_EQ(1, ret);
-EXPECT_EQ(expected, output);
-}
-}
-*/
-    
-/*int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-  }*/
-
-
