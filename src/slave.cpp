@@ -143,8 +143,10 @@ std::string Slave::status_key(){
 void Slave::load_status(){
     std::string key;
     std::string seq;
-    meta->hget(status_key(), "last_key", &key);
-    meta->hget(status_key(), "last_seq", &seq);
+    //meta->hget(status_key(), "last_key", &key);
+    //meta->hget(status_key(), "last_seq", &seq);
+    meta->get(status_key() + ".last_key", &key);
+    meta->get(status_key() + ".last_seq", &seq);
     if(!key.empty()){
 		this->last_key = key;
     }
@@ -155,8 +157,10 @@ void Slave::load_status(){
 
 void Slave::save_status(){
     std::string seq = str(this->last_seq);
-    meta->hset(status_key(), "last_key", this->last_key);
-    meta->hset(status_key(), "last_seq", seq);
+    //meta->hset(status_key(), "last_key", this->last_key);
+    //meta->hset(status_key(), "last_seq", seq);
+    meta->set(status_key() + ".last_key", this->last_key);
+    meta->set(status_key() + ".last_seq", seq);
 }
 
 int Slave::connect(){
